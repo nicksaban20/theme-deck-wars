@@ -16,11 +16,11 @@ interface CardWithArtProps {
 
 export function CardWithArt({ isDraftPhase = false, ...props }: CardWithArtProps) {
   const { artStyle } = useArtStyle();
-  
+
   // During draft phase, use icons instead of AI art to save resources
   // AI art will only generate for the final selected cards in battle
-  const effectiveArtStyle = isDraftPhase && artStyle === "ai" ? "icons" : artStyle;
-  
+  const effectiveArtStyle = isDraftPhase && (artStyle === "ai" || artStyle === "local-ai") ? "icons" : artStyle;
+
   return <Card {...props} artStyle={effectiveArtStyle} />;
 }
 

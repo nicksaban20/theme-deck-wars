@@ -21,6 +21,20 @@ export function ArtStyleProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Listen for changes from other tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cardArtStyle" && e.newValue) {
+        if (["pattern", "ai", "local-ai", "icons"].includes(e.newValue)) {
+          setArtStyle(e.newValue as CardArtStyle);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   // Save to localStorage on change
   const handleSetArtStyle = (style: CardArtStyle) => {
     setArtStyle(style);
