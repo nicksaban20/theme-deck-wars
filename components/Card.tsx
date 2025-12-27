@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card as CardType, CardColor, CardArtStyle } from "@/lib/types";
 
 interface CardProps {
@@ -64,68 +64,81 @@ const sizeClasses = {
   lg: "w-56 h-76",
 };
 
-// Game-icons.net CDN URL pattern
-const GAME_ICONS_CDN = "https://game-icons.net/icons/ffffff/000000";
+// Iconify CDN - much more reliable than game-icons.net directly
+// Format: https://api.iconify.design/game-icons/{icon-name}.svg?color=white
+const ICONIFY_BASE = "https://api.iconify.design/game-icons";
 
-// Map icon keywords to game-icons.net paths
-const iconPathMap: Record<string, string> = {
-  sword: "1x1/lorc/crossed-swords.svg",
-  shield: "1x1/lorc/shield.svg",
-  skull: "1x1/lorc/skull.svg",
-  fire: "1x1/lorc/flame.svg",
-  lightning: "1x1/lorc/lightning-helix.svg",
-  heart: "1x1/lorc/heart-plus.svg",
-  star: "1x1/lorc/star-formation.svg",
-  crown: "1x1/lorc/crown.svg",
-  dragon: "1x1/lorc/dragon-head.svg",
-  wolf: "1x1/lorc/wolf-head.svg",
-  eagle: "1x1/lorc/eagle-head.svg",
-  snake: "1x1/lorc/snake.svg",
-  spider: "1x1/lorc/spider-face.svg",
-  castle: "1x1/lorc/castle.svg",
-  tower: "1x1/lorc/tower-flag.svg",
-  gem: "1x1/lorc/gem.svg",
-  potion: "1x1/lorc/potion-ball.svg",
-  scroll: "1x1/lorc/scroll-unfurled.svg",
-  book: "1x1/lorc/book-cover.svg",
-  wand: "1x1/lorc/magic-wand.svg",
-  staff: "1x1/lorc/wizard-staff.svg",
-  bow: "1x1/lorc/high-shot.svg",
-  arrow: "1x1/lorc/arrow-cluster.svg",
-  axe: "1x1/lorc/battle-axe.svg",
-  hammer: "1x1/lorc/hammer-drop.svg",
-  dagger: "1x1/lorc/stiletto.svg",
-  claw: "1x1/lorc/wolverine-claws.svg",
-  fist: "1x1/lorc/fist.svg",
-  boot: "1x1/lorc/boot-stomp.svg",
-  helmet: "1x1/lorc/viking-helmet.svg",
-  armor: "1x1/lorc/breastplate.svg",
-  ring: "1x1/lorc/ring.svg",
-  eye: "1x1/lorc/eye-target.svg",
-  moon: "1x1/lorc/moon.svg",
-  sun: "1x1/lorc/sun.svg",
-  cloud: "1x1/lorc/cloud.svg",
-  leaf: "1x1/lorc/leaf.svg",
-  tree: "1x1/lorc/oak.svg",
-  mountain: "1x1/lorc/mountain-peak.svg",
-  wave: "1x1/lorc/wave-crest.svg",
-  bomb: "1x1/lorc/bomb.svg",
-  trap: "1x1/lorc/bear-trap.svg",
-  key: "1x1/lorc/key.svg",
-  lock: "1x1/lorc/padlock.svg",
-  chain: "1x1/lorc/chain.svg",
-  wing: "1x1/lorc/feathered-wing.svg",
-  horn: "1x1/lorc/horn-call.svg",
+// Map icon keywords to iconify game-icons names
+const iconNameMap: Record<string, string> = {
+  sword: "crossed-swords",
+  shield: "shield",
+  skull: "skull",
+  fire: "flame",
+  lightning: "lightning-helix",
+  heart: "heart-plus",
+  star: "star-formation",
+  crown: "crown",
+  dragon: "dragon-head",
+  wolf: "wolf-head",
+  eagle: "eagle-head",
+  snake: "snake",
+  spider: "spider-face",
+  castle: "castle",
+  tower: "tower-flag",
+  gem: "gem",
+  potion: "potion-ball",
+  scroll: "scroll-unfurled",
+  book: "book-cover",
+  wand: "fairy-wand",
+  staff: "wizard-staff",
+  bow: "high-shot",
+  arrow: "arrow-cluster",
+  axe: "battle-axe",
+  hammer: "hammer-drop",
+  dagger: "stiletto",
+  claw: "wolverine-claws",
+  fist: "fist",
+  boot: "boot-stomp",
+  helmet: "viking-helmet",
+  armor: "breastplate",
+  ring: "ring",
+  eye: "eye-target",
+  moon: "moon",
+  sun: "sun",
+  cloud: "cloud",
+  leaf: "leaf",
+  tree: "oak",
+  mountain: "mountain-peak",
+  wave: "wave-crest",
+  bomb: "bomb",
+  trap: "bear-trap",
+  key: "key",
+  lock: "padlock",
+  chain: "chain",
+  wing: "feathered-wing",
+  horn: "horn-call",
 };
 
-function getIconUrl(keyword: string): string {
-  const path = iconPathMap[keyword.toLowerCase()] || iconPathMap.sword;
-  return `${GAME_ICONS_CDN}/${path}`;
+// Inline SVG icons as fallback (guaranteed to work)
+const fallbackIcons: Record<string, string> = {
+  sword: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.92 5L5 6.92l4.06 4.06L5 15.04 6.92 17l4.06-4.06 4.05 4.05 1.92-1.92-4.05-4.05 8.05-8.05L19.03 1.05 11 9.08 6.92 5z"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>`,
+  skull: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.69 2.47 6.86 6 8.25V22h8v-1.75c3.53-1.39 6-4.56 6-8.25 0-5.52-4.48-10-10-10zm-2 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm4 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>`,
+  fire: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c-3.87 0-7-3.13-7-7 0-2.38 1.19-4.47 3-5.74V3c0-.55.45-1 1-1h6c.55 0 1 .45 1 1v7.26c1.81 1.27 3 3.36 3 5.74 0 3.87-3.13 7-7 7z"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+  crown: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`,
+  lightning: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`,
+};
+
+function getIconUrl(keyword: string, color: string = "ffffff"): string {
+  const iconName = iconNameMap[keyword?.toLowerCase()] || "crossed-swords";
+  return `${ICONIFY_BASE}/${iconName}.svg?color=%23${color}`;
 }
 
 function getPollinationsUrl(prompt: string, width: number = 300, height: number = 400): string {
-  const encodedPrompt = encodeURIComponent(prompt + ", trading card game art, fantasy style, high quality");
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true`;
+  const encodedPrompt = encodeURIComponent(prompt + ", trading card game art, fantasy style, high quality, detailed illustration");
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${prompt.length}`;
 }
 
 export function Card({
@@ -140,15 +153,38 @@ export function Card({
   const colors = colorClasses[card.color] || colorClasses.slate;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [iconLoaded, setIconLoaded] = useState(false);
+  const [iconError, setIconError] = useState(false);
+
+  // Reset loading states when card or artStyle changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+    setIconLoaded(false);
+    setIconError(false);
+  }, [card.id, artStyle]);
 
   const artSizes = {
-    sm: { width: 80, height: 60 },
-    md: { width: 140, height: 100 },
-    lg: { width: 180, height: 140 },
+    sm: { width: 100, height: 80 },
+    md: { width: 160, height: 120 },
+    lg: { width: 200, height: 160 },
+  };
+
+  const renderFallbackIcon = () => {
+    const keyword = card.iconKeyword?.toLowerCase() || "sword";
+    const svgContent = fallbackIcons[keyword] || fallbackIcons.sword;
+    
+    return (
+      <div 
+        className="w-12 h-12 md:w-16 md:h-16 text-white/80"
+        style={{ filter: `drop-shadow(0 0 8px ${colors.hex})` }}
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
+    );
   };
 
   const renderArtArea = () => {
-    // Pattern mode (default)
+    // Pattern mode (default) - always works, no loading needed
     if (artStyle === "pattern") {
       return (
         <div className="flex-1 bg-black/20 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
@@ -160,7 +196,7 @@ export function Card({
       );
     }
 
-    // AI Art mode (Pollinations.ai)
+    // AI Art mode (Pollinations.ai) - takes time to generate
     if (artStyle === "ai") {
       const imageUrl = card.imagePrompt 
         ? getPollinationsUrl(card.imagePrompt, artSizes[size].width * 2, artSizes[size].height * 2)
@@ -168,58 +204,67 @@ export function Card({
 
       return (
         <div className="flex-1 bg-black/30 rounded-lg mb-2 overflow-hidden relative">
+          {/* Always show pattern background */}
+          <div className="absolute inset-0 card-pattern-grid opacity-30" />
+          
+          {/* Loading state with helpful text */}
           {!imageLoaded && !imageError && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
+              <span className="text-[10px] text-white/50">Generating...</span>
             </div>
           )}
-          {imageError ? (
-            <div className="absolute inset-0 flex items-center justify-center card-pattern-dots opacity-50">
-              <span className="text-3xl opacity-40">{getCardEmoji(card.color)}</span>
+          
+          {/* Error fallback */}
+          {imageError && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <span className="text-3xl opacity-60">{getCardEmoji(card.color)}</span>
             </div>
-          ) : (
-            <img
-              src={imageUrl}
-              alt={card.name}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-            />
           )}
+          
+          {/* The actual image - loads in background */}
+          <img
+            src={imageUrl}
+            alt={card.name}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+          />
         </div>
       );
     }
 
-    // Icons mode (Game-icons.net)
+    // Icons mode - use Iconify CDN with inline SVG fallback
     if (artStyle === "icons") {
       const iconUrl = getIconUrl(card.iconKeyword || "sword");
 
       return (
         <div 
           className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
-          style={{ backgroundColor: `${colors.hex}30` }}
+          style={{ backgroundColor: `${colors.hex}20` }}
         >
-          <div className="absolute inset-0 card-pattern-dots opacity-20" />
+          <div className="absolute inset-0 card-pattern-dots opacity-15" />
+          
+          {/* Show fallback icon immediately, then swap to loaded one */}
           <div 
-            className="w-16 h-16 md:w-20 md:h-20 relative z-10"
-            style={{ 
-              filter: `drop-shadow(0 0 10px ${colors.hex})`,
-            }}
+            className="relative z-10 flex items-center justify-center"
+            style={{ filter: `drop-shadow(0 0 10px ${colors.hex})` }}
           >
+            {/* Fallback inline SVG - shows immediately */}
+            {!iconLoaded && !iconError && renderFallbackIcon()}
+            
+            {/* CDN icon - loads in background */}
             <img
               src={iconUrl}
               alt={card.iconKeyword || "icon"}
-              className="w-full h-full"
-              style={{ 
-                filter: "invert(1)",
-                opacity: 0.9,
-              }}
-              onError={(e) => {
-                // Fallback to emoji if icon fails to load
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              className={`w-14 h-14 md:w-18 md:h-18 transition-opacity duration-300 ${
+                iconLoaded ? "opacity-100" : "absolute opacity-0"
+              }`}
+              onLoad={() => setIconLoaded(true)}
+              onError={() => setIconError(true)}
             />
           </div>
         </div>
