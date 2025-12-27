@@ -102,7 +102,7 @@ export function DraftPhase({
               <div className="flex flex-wrap gap-4 justify-center">
                 {currentPlayer.draftedCards.map((card) => (
                   <div key={card.id} className="relative group">
-                    <CardWithArt card={card} size="sm" />
+                    <CardWithArt card={card} size="sm" isDraftPhase />
                     {!currentPlayer.isDraftReady && (
                       <button
                         onClick={() => onDiscardCard(card.id)}
@@ -161,6 +161,7 @@ export function DraftPhase({
                     size="md"
                     isPlayable={selectedCount < CARDS_PER_PLAYER}
                     disabled={selectedCount >= CARDS_PER_PLAYER}
+                    isDraftPhase
                   />
                 </div>
               ))}

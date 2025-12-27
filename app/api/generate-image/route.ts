@@ -12,7 +12,7 @@ const MAX_CACHE_SIZE = 100;
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, cardId } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(
@@ -21,11 +21,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check cache first
-    const cacheKey = prompt.slice(0, 100).toLowerCase().trim();
+    // Check cache first - use cardId if provided for unique caching
+    const cacheKey = cardId 
+      ? `${cardId}-${prompt.slice(0, 50).toLowerCase().trim()}`
+      : prompt.slice(0, 100).toLowerCase().trim();
+    
     if (imageCache.has(cacheKey)) {
+      console.log(`[Image API] Cache hit for: ${cacheKey.slice(0, 30)}...`);
       return NextResponse.json({ image: imageCache.get(cacheKey) });
     }
+    
+    console.log(`[Image API] Generating image for: ${prompt.slice(0, 50)}...`);
 
     // Check for Cloudflare credentials
     if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
@@ -73,6 +79,8 @@ export async function POST(request: NextRequest) {
 
     // The image is already base64 encoded
     const dataUrl = `data:image/jpeg;base64,${cfData.result.image}`;
+    
+    console.log(`[Image API] Successfully generated image, size: ${dataUrl.length} chars`);
 
     // Cache the result
     if (imageCache.size >= MAX_CACHE_SIZE) {
