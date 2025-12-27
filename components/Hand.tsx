@@ -59,7 +59,7 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
             const canPlay = player && gameState ? canPlayCard(player, card, gameState) : true;
             const disableReason = !isCurrentTurn
               ? "Not your turn"
-              : !canPlay
+              : !canPlay && gameState
                 ? `Not enough Mana (Cost: ${getEffectiveManaCost(card, gameState)})`
                 : "";
 
