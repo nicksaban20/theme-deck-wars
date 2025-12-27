@@ -2,7 +2,7 @@
 
 import { Player, Card as CardType } from "@/lib/types";
 import { CardWithArt } from "./CardWithArt";
-import { CARDS_PER_PLAYER } from "@/lib/gameLogic";
+import { CARDS_PER_PLAYER, getCardSynergies, DRAFT_POOL_SIZE } from "@/lib/gameLogic";
 
 interface DraftPhaseProps {
   currentPlayer: Player | null;
@@ -18,6 +18,7 @@ export function DraftPhase({
   onSelectCard,
   onDiscardCard,
   onConfirmDraft,
+  blindDraft = false,
 }: DraftPhaseProps) {
   if (!currentPlayer) {
     return (
@@ -49,7 +50,8 @@ export function DraftPhase({
             Draft Your Deck
           </h1>
           <p className="text-gray-400 mb-4">
-            Select {CARDS_PER_PLAYER} cards from your pool of 7. Choose wisely!
+            Select {CARDS_PER_PLAYER} cards from your pool of {DRAFT_POOL_SIZE}. 
+            {!blindDraft && " Watch for cards with ⚡ - they synergize with your deck!"}
           </p>
           
           {/* Progress indicator */}
@@ -67,7 +69,17 @@ export function DraftPhase({
                   ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400" 
                   : "bg-white/5 border border-white/10 text-gray-400"
               }`}>
-                {opponent.name}: {opponent.isDraftReady ? "Ready ✓" : "Drafting..."}
+                {blindDraft ? (
+                  <>
+                    {opponent.name}: {opponent.isDraftReady ? "Ready ✓" : "Drafting..."}
+                    <span className="text-violet-400 ml-2">(Blind)</span>
+                  </>
+                ) : (
+                  <>
+                    {opponent.name}: {opponent.draftedCards.length}/{CARDS_PER_PLAYER} selected
+                    {opponent.isDraftReady && " ✓ Ready"}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -145,26 +157,38 @@ export function DraftPhase({
             </p>
             
             <div className="flex flex-wrap gap-4 justify-center">
-              {currentPlayer.draftPool.map((card) => (
-                <div 
-                  key={card.id} 
-                  className="cursor-pointer transform transition-all duration-200 
-                             hover:scale-105 hover:-translate-y-2"
-                  onClick={() => {
-                    if (selectedCount < CARDS_PER_PLAYER) {
-                      onSelectCard(card.id);
-                    }
-                  }}
-                >
-                  <CardWithArt 
-                    card={card} 
-                    size="md"
-                    isPlayable={selectedCount < CARDS_PER_PLAYER}
-                    disabled={selectedCount >= CARDS_PER_PLAYER}
-                    isDraftPhase
-                  />
-                </div>
-              ))}
+              {currentPlayer.draftPool.map((card) => {
+                const { synergies } = getCardSynergies(card, currentPlayer);
+                const hasSynergy = synergies.length > 0;
+                
+                return (
+                  <div 
+                    key={card.id} 
+                    className={`relative cursor-pointer transform transition-all duration-200 
+                               hover:scale-105 hover:-translate-y-2 ${
+                                 hasSynergy ? "ring-2 ring-yellow-400/50" : ""
+                               }`}
+                    onClick={() => {
+                      if (selectedCount < CARDS_PER_PLAYER) {
+                        onSelectCard(card.id);
+                      }
+                    }}
+                    title={hasSynergy ? `Synergies: ${synergies.join(", ")}` : undefined}
+                  >
+                    <CardWithArt 
+                      card={card} 
+                      size="md"
+                      isPlayable={selectedCount < CARDS_PER_PLAYER}
+                      disabled={selectedCount >= CARDS_PER_PLAYER}
+                    />
+                    {hasSynergy && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-black text-xs font-bold">
+                        ⚡
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

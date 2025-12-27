@@ -34,9 +34,19 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
 
   const socketRef = useRef<PartySocket | null>(null);
   const connectionIdRef = useRef<string | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_DELAY = 2000; // 2 seconds
 
-  useEffect(() => {
+  const connect = useCallback(() => {
     if (!roomId) return;
+
+    // Clear any existing reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
 
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
@@ -49,6 +59,7 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
       setConnected(true);
       connectionIdRef.current = socket.id;
       setError(null);
+      reconnectAttemptsRef.current = 0; // Reset on successful connection
     });
 
     socket.addEventListener("message", (event) => {
@@ -101,24 +112,45 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
             break;
         }
       } catch (e) {
-        console.error("Failed to parse message:", e);
+        console.error("[Socket] Failed to parse message:", e);
       }
     });
 
     socket.addEventListener("close", () => {
       setConnected(false);
+      
+      // Attempt to reconnect if we haven't exceeded max attempts
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttemptsRef.current += 1;
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log(`[Socket] Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
+          connect();
+        }, RECONNECT_DELAY);
+      } else {
+        setError("Connection lost. Please refresh the page.");
+      }
     });
 
-    socket.addEventListener("error", () => {
+    socket.addEventListener("error", (error) => {
+      console.error("[Socket] Connection error:", error);
       setError("Connection error");
       setConnected(false);
     });
+  }, [roomId]);
+
+  useEffect(() => {
+    connect();
 
     return () => {
-      socket.close();
-      socketRef.current = null;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     };
-  }, [roomId]);
+  }, [connect]);
 
   const sendMessage = useCallback((message: ClientMessage) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -160,6 +192,17 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
 
   const draftConfirm = useCallback(() => {
     sendMessage({ type: "draft-confirm" });
+  }, [sendMessage]);
+
+  const revealCard = useCallback(
+    (cardId: string) => {
+      sendMessage({ type: "reveal-card", cardId });
+    },
+    [sendMessage]
+  );
+
+  const toggleBlindDraft = useCallback(() => {
+    sendMessage({ type: "toggle-blind-draft" });
   }, [sendMessage]);
 
   const playCard = useCallback(
@@ -207,6 +250,8 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
     draftSelect,
     draftDiscard,
     draftConfirm,
+    revealCard,
+    toggleBlindDraft,
     playCard,
     continueMatch,
     requestRematch,

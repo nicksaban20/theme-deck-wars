@@ -171,9 +171,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ image: imageUrl, cached: false });
   } catch (error) {
-    console.error("Error generating image:", error);
+    console.error("[Image API] Error generating image:", error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      console.error("[Image API] Error details:", error.message);
+    }
+    
+    // Return error but don't crash - let client handle fallback
     return NextResponse.json(
-      { error: "Failed to generate image" },
+      { 
+        error: "Failed to generate image",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
       { status: 500 }
     );
   }

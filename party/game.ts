@@ -11,6 +11,7 @@ import {
   createInitialState,
   createPlayer,
   calculateDamage,
+  calculateDamageWithPerks,
   getLastPlayedCard,
   checkGameEnd,
   checkMatchEnd,
@@ -19,6 +20,16 @@ import {
   resetStateForNewGame,
   resetStateForRematch,
   isDraftComplete,
+  canPlayCard,
+  getCardDefaults,
+  evaluateTriggeredPerks,
+  applyStatusEffects,
+  processStatusEffects,
+  gainManaPerTurn,
+  calculateSpeedOrder,
+  getRoundMana,
+  getRoundModifier,
+  getEffectiveManaCost,
   STARTING_HP,
   CARDS_PER_PLAYER,
   WINS_TO_WIN_MATCH,
@@ -133,8 +144,14 @@ export default class GameServer implements Party.Server {
         case "draft-confirm":
           this.handleDraftConfirm(sender);
           break;
+        case "reveal-card":
+          this.handleRevealCard(sender, data.cardId);
+          break;
         case "play-card":
           await this.handlePlayCard(sender, data.cardId);
+          break;
+        case "toggle-blind-draft":
+          this.handleToggleBlindDraft(sender);
           break;
         case "continue-match":
           this.handleContinueMatch(sender);
@@ -148,68 +165,102 @@ export default class GameServer implements Party.Server {
         case "accept-rematch":
           this.handleAcceptRematch(sender);
           break;
+        default:
+          console.warn(`[Game] Unknown message type: ${'type' in data ? data.type : 'unknown'}`);
+          this.sendError(sender, "Unknown message type");
+          return;
       }
 
       await this.saveState();
       this.broadcastState();
     } catch (error) {
-      console.error("Error handling message:", error);
-      this.sendError(sender, "Invalid message format");
+      console.error("[Game] Error handling message:", error);
+      if (error instanceof Error) {
+        console.error("[Game] Error details:", error.message, error.stack);
+      }
+      this.sendError(sender, error instanceof Error ? error.message : "Invalid message format");
     }
   }
 
   handleJoin(conn: Party.Connection, playerName: string, isSpectator?: boolean) {
-    // Handle spectator join
-    if (isSpectator) {
-      if (!this.state.spectators.includes(conn.id)) {
-        this.state.spectators.push(conn.id);
-        this.broadcastSpectatorCount();
+    try {
+      // Validate player name
+      const sanitizedName = (playerName || `Player ${Object.keys(this.state.players).length + 1}`)
+        .trim()
+        .slice(0, 50); // Limit length
+      
+      if (!sanitizedName) {
+        this.sendError(conn, "Player name cannot be empty");
+        return;
       }
-      return;
-    }
 
-    // Check if room is full for players
-    if (Object.keys(this.state.players).length >= 2) {
-      // Auto-join as spectator if room is full
-      if (!this.state.spectators.includes(conn.id)) {
-        this.state.spectators.push(conn.id);
-        this.broadcastSpectatorCount();
+      // Handle spectator join
+      if (isSpectator) {
+        if (!this.state.spectators.includes(conn.id)) {
+          this.state.spectators.push(conn.id);
+          this.broadcastSpectatorCount();
+        }
+        return;
       }
-      this.sendError(conn, "Room is full - you're now spectating!");
-      return;
-    }
 
-    if (this.state.players[conn.id]) {
-      return; // Already joined
-    }
+      // Check if room is full for players
+      if (Object.keys(this.state.players).length >= 2) {
+        // Auto-join as spectator if room is full
+        if (!this.state.spectators.includes(conn.id)) {
+          this.state.spectators.push(conn.id);
+          this.broadcastSpectatorCount();
+        }
+        this.sendError(conn, "Room is full - you're now spectating!");
+        return;
+      }
 
-    const player = createPlayer(conn.id, playerName || `Player ${Object.keys(this.state.players).length + 1}`);
-    this.state.players[conn.id] = player;
-    this.state.playerOrder.push(conn.id);
+      if (this.state.players[conn.id]) {
+        return; // Already joined
+      }
 
-    if (Object.keys(this.state.players).length === 1) {
-      this.state.message = "Waiting for opponent...";
-    } else if (Object.keys(this.state.players).length === 2) {
-      this.state.phase = "theme-select";
-      this.state.message = "Both players joined! Choose your themes.";
+      const player = createPlayer(conn.id, sanitizedName);
+      this.state.players[conn.id] = player;
+      this.state.playerOrder.push(conn.id);
+
+      if (Object.keys(this.state.players).length === 1) {
+        this.state.message = "Waiting for opponent...";
+      } else if (Object.keys(this.state.players).length === 2) {
+        this.state.phase = "theme-select";
+        this.state.message = "Both players joined! Choose your themes.";
+      }
+    } catch (error) {
+      console.error("[Game] Error in handleJoin:", error);
+      this.sendError(conn, "Failed to join game");
     }
   }
 
   handleSetTheme(conn: Party.Connection, theme: string) {
-    if (this.state.phase !== "theme-select") {
-      this.sendError(conn, "Cannot set theme in this phase");
-      return;
-    }
+    try {
+      if (this.state.phase !== "theme-select") {
+        this.sendError(conn, "Cannot set theme in this phase");
+        return;
+      }
 
-    const player = this.state.players[conn.id];
-    if (!player) {
-      this.sendError(conn, "Player not found");
-      return;
-    }
+      const player = this.state.players[conn.id];
+      if (!player) {
+        this.sendError(conn, "Player not found");
+        return;
+      }
 
-    player.theme = theme.trim();
-    player.originalTheme = theme.trim();
-    this.state.message = `${player.name} chose: "${player.theme}"`;
+      // Validate and sanitize theme
+      const sanitizedTheme = theme?.trim().slice(0, 100) || ""; // Limit length
+      if (!sanitizedTheme) {
+        this.sendError(conn, "Theme cannot be empty");
+        return;
+      }
+
+      player.theme = sanitizedTheme;
+      player.originalTheme = sanitizedTheme;
+      this.state.message = `${player.name} chose: "${player.theme}"`;
+    } catch (error) {
+      console.error("[Game] Error in handleSetTheme:", error);
+      this.sendError(conn, "Failed to set theme");
+    }
   }
 
   handleReady(conn: Party.Connection) {
@@ -317,13 +368,79 @@ export default class GameServer implements Party.Server {
     // Check if both players are ready
     const allDraftReady = Object.values(this.state.players).every(p => p.isDraftReady);
     if (allDraftReady) {
+      // Transition to reveal phase
+      this.state.phase = "reveal";
+      this.state.message = "Select a card to reveal to your opponent...";
+      
+      // Reset reveal state
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        player.revealedCard = null;
+        player.isRevealReady = false;
+      }
+    } else {
+      this.state.message = `${player.name} is ready! Waiting for opponent to finish drafting...`;
+    }
+  }
+
+  handleRevealCard(conn: Party.Connection, cardId: string) {
+    if (this.state.phase !== "reveal") {
+      this.sendError(conn, "Cannot reveal cards in this phase");
+      return;
+    }
+
+    const player = this.state.players[conn.id];
+    if (!player) {
+      this.sendError(conn, "Player not found");
+      return;
+    }
+
+    if (player.isRevealReady) {
+      this.sendError(conn, "You've already selected a card to reveal");
+      return;
+    }
+
+    const cardIndex = player.cards.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) {
+      this.sendError(conn, "Card not in your hand");
+      return;
+    }
+
+    player.revealedCard = player.cards[cardIndex];
+    player.isRevealReady = true;
+    this.state.message = `${player.name} selected a card to reveal...`;
+
+    // Check if both players are ready
+    const allRevealReady = Object.values(this.state.players).every(p => p.isRevealReady);
+    if (allRevealReady) {
+      // Both revealed, show reveals and start battle
+      const players = Object.values(this.state.players);
+      const revealMessage = players.map(p => 
+        `${p.name} revealed: ${p.revealedCard?.name || 'Unknown'}`
+      ).join(' | ');
+      
       this.state.phase = "battle";
+      // Initialize mana for battle start (round-based scaling)
+      const roundMana = getRoundMana(this.state.round);
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        player.mana = roundMana;
+        player.maxMana = roundMana;
+      }
+      
+      // Apply round modifier
+      const modifier = getRoundModifier(this.state.round);
+      if (modifier) {
+        modifier.effect(this.state);
+        this.state.roundModifier = modifier.name;
+      }
+      
       this.state.currentTurn = this.state.playerOrder[0];
       const firstPlayer = this.state.players[this.state.playerOrder[0]];
-      this.state.message = `Battle begins! ${firstPlayer?.name}'s turn`;
+      this.state.message = `${revealMessage}. Battle begins! ${firstPlayer?.name}'s turn`;
       
-      // Record game start in history (only once per match)
-      if (!this.gameHistoryRecorded) {
+      // Record game start in history (only for first game of match)
+      if (this.state.gameNumber === 1 && !this.gameHistoryRecorded) {
         this.gameHistoryRecorded = true;
         const players = Object.values(this.state.players);
         if (players.length >= 2) {
@@ -365,20 +482,54 @@ export default class GameServer implements Party.Server {
     }
 
     const card = player.cards[cardIndex];
+    const cardWithDefaults = getCardDefaults(card);
+
+    // Check mana cost (with round modifiers)
+    const effectiveCost = getEffectiveManaCost(card, this.state);
+    if (!canPlayCard(player, card, this.state)) {
+      this.sendError(conn, `Not enough mana! Need ${effectiveCost}, have ${player.mana}`);
+      return;
+    }
+
+    // Deduct mana (using effective cost)
+    player.mana -= effectiveCost;
     player.cards.splice(cardIndex, 1);
 
     const opponentId = this.state.playerOrder.find((id) => id !== conn.id);
+    const defender = opponentId ? this.state.players[opponentId] : null;
     const defendingCard = getLastPlayedCard(this.state, conn.id);
 
-    const { damage, abilityTriggered } = calculateDamage(
+    // Calculate damage with perks
+    const { damage, abilityTriggered } = calculateDamageWithPerks(
       card,
       defendingCard,
+      player,
+      defender || player,
       this.state
     );
 
-    if (opponentId && this.state.players[opponentId]) {
-      this.state.players[opponentId].hp -= damage;
+    if (opponentId && defender) {
+      defender.hp -= damage;
       this.state.lastDamage = damage;
+    }
+
+    // Apply status effects
+    if (defender) {
+      const newStatusEffects = applyStatusEffects(card, defender);
+      defender.statusEffects = newStatusEffects;
+    }
+
+    // Apply triggered perks
+    const onPlayPerk = evaluateTriggeredPerks(card, 'onPlay', player, this.state);
+    if (onPlayPerk) {
+      // Handle draw card perk
+      if (onPlayPerk.effect.toLowerCase().includes('draw')) {
+        // Could add card drawing logic here if needed
+      }
+      // Handle heal perk
+      if (onPlayPerk.effect.toLowerCase().includes('heal')) {
+        player.hp = Math.min(player.hp + onPlayPerk.value, STARTING_HP);
+      }
     }
 
     const playedCard: PlayedCard = {
@@ -388,6 +539,18 @@ export default class GameServer implements Party.Server {
       gameNumber: this.state.gameNumber,
     };
     this.state.playedCards.push(playedCard);
+
+    // Update speed order for next round
+    if (defender) {
+      const player1Card = this.state.playedCards
+        .filter(pc => pc.playerId === conn.id && pc.round === this.state.round)
+        .map(pc => pc.card)[0] || null;
+      const player2Card = this.state.playedCards
+        .filter(pc => pc.playerId === opponentId && pc.round === this.state.round)
+        .map(pc => pc.card)[0] || null;
+      
+      this.state.speedOrder = calculateSpeedOrder(this.state, player1Card, player2Card);
+    }
 
     if (abilityTriggered) {
       const abilityMessage: ServerMessage = {
@@ -423,7 +586,32 @@ export default class GameServer implements Party.Server {
     ).length;
     
     if (cardsThisRound >= 2) {
+      // Both players played, process end of round
+      // Process status effects for all players
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        const { hpChange, effectsRemaining } = processStatusEffects(player);
+        player.hp += hpChange;
+        player.hp = Math.max(0, player.hp); // Don't go below 0
+        player.statusEffects = effectsRemaining;
+      }
+      
       this.state.round += 1;
+      
+      // Update mana for new round (round-based scaling)
+      const roundMana = getRoundMana(this.state.round);
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        player.maxMana = roundMana;
+        player.mana = roundMana; // Refill to round max
+      }
+      
+      // Apply round modifier for new round
+      const modifier = getRoundModifier(this.state.round);
+      if (modifier) {
+        modifier.effect(this.state);
+        this.state.roundModifier = modifier.name;
+      }
       
       const roundEndCheck = checkGameEnd(this.state);
       if (roundEndCheck.ended) {
@@ -432,11 +620,23 @@ export default class GameServer implements Party.Server {
       }
     }
 
-    this.state.currentTurn = nextPlayerId;
-    
+    // Set next turn
     if (nextPlayerId) {
       const nextPlayer = this.state.players[nextPlayerId];
-      this.state.message = `${nextPlayer?.name}'s turn`;
+      
+      // Use speed order if available, otherwise use normal turn order
+      if (this.state.speedOrder && this.state.speedOrder.length === 2) {
+        this.state.currentTurn = this.state.speedOrder[0];
+        const speedCard = this.state.playedCards.find(pc => 
+          pc.playerId === this.state.speedOrder?.[0] && 
+          pc.round === this.state.round
+        )?.card;
+        const speed = speedCard ? getCardDefaults(speedCard).speed : 0;
+        this.state.message = `${this.state.players[this.state.speedOrder[0]]?.name}'s turn (speed: ${speed})`;
+      } else {
+        this.state.currentTurn = nextPlayerId;
+        this.state.message = `${nextPlayer?.name}'s turn`;
+      }
     }
   }
 
@@ -514,6 +714,46 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    // Analyze previous game strategy for adaptive generation
+    const players = Object.values(this.state.players);
+    const lastGame = this.state.gameHistory[this.state.gameHistory.length - 1];
+    
+    // Determine strategies based on cards played
+    const strategies: Record<string, string> = {};
+    for (const player of players) {
+      const playedCards = this.state.playedCards.filter(
+        pc => pc.playerId === player.id && pc.gameNumber === this.state.gameNumber
+      );
+      
+      if (playedCards.length > 0) {
+        const avgAttack = playedCards.reduce((sum, pc) => sum + pc.card.attack, 0) / playedCards.length;
+        const avgDefense = playedCards.reduce((sum, pc) => sum + pc.card.defense, 0) / playedCards.length;
+        const avgMana = playedCards.reduce((sum, pc) => sum + getCardDefaults(pc.card).manaCost, 0) / playedCards.length;
+        
+        if (avgAttack > avgDefense + 1) {
+          strategies[player.id] = "aggressive high-attack";
+        } else if (avgDefense > avgAttack + 1) {
+          strategies[player.id] = "defensive high-defense";
+        } else if (avgMana > 3) {
+          strategies[player.id] = "high-cost powerful cards";
+        } else {
+          strategies[player.id] = "balanced versatile";
+        }
+      }
+    }
+
+    // Store strategies for adaptive generation BEFORE incrementing game number
+    if (lastGame) {
+      this.state.gameHistory.push({
+        gameNumber: this.state.gameNumber,
+        winner: lastGame.winner || null,
+        player1HP: players[0]?.hp || 0,
+        player2HP: players[1]?.hp || 0,
+        player1Strategy: strategies[players[0]?.id || ''],
+        player2Strategy: strategies[players[1]?.id || ''],
+      });
+    }
+
     // Reset players for the new game
     for (const playerId of this.state.playerOrder) {
       const player = this.state.players[playerId];
@@ -522,18 +762,27 @@ export default class GameServer implements Party.Server {
         player.cards = [];
         player.draftPool = [];
         player.draftedCards = [];
+        player.revealedCard = null;
+        player.isRevealReady = false;
         player.isReady = true; // Keep ready
         player.isDraftReady = false;
+        player.mana = getRoundMana(1); // Reset mana for round 1
+        player.maxMana = getRoundMana(1);
+        player.statusEffects = []; // Clear status effects
       }
     }
 
-    // Reset game state for new game
+    // Increment game number and reset game state for new game
+    this.state.gameNumber += 1;
     this.state.phase = "generating";
     this.state.round = 1;
     this.state.lastDamage = null;
     this.state.roundWinner = null;
     this.state.currentTurn = null;
+    this.state.roundModifier = null;
     this.state.message = `Game ${this.state.gameNumber} - Generating new cards...`;
+    
+    console.log(`[Game] Continuing to game ${this.state.gameNumber}, phase: ${this.state.phase}`);
   }
 
   handleRematchRequest(conn: Party.Connection, swapThemes: boolean) {
@@ -589,6 +838,7 @@ export default class GameServer implements Party.Server {
     const swapThemes = Array.from(this.rematchRequests.values()).some(r => r.swapThemes);
     
     this.state = resetStateForRematch(this.state, swapThemes);
+    this.gameHistoryRecorded = false; // Reset for new match
     this.rematchRequests.clear();
     
     this.broadcastState();
@@ -622,7 +872,7 @@ export default class GameServer implements Party.Server {
         if (allHaveCards) {
           if (body.isDraft) {
             this.state.phase = "drafting";
-            this.state.message = "Draft phase! Select 5 cards from your pool of 7.";
+            this.state.message = `Draft phase! Select ${CARDS_PER_PLAYER} cards from your pool of ${DRAFT_POOL_SIZE}.`;
           } else {
             this.state.phase = "battle";
             this.state.currentTurn = this.state.playerOrder[0];

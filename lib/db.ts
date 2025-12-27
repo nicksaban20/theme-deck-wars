@@ -82,22 +82,27 @@ export async function getCachedThemeCards(theme: string): Promise<Card[] | null>
     const themeKey = normalizeTheme(theme);
     
     const result = await sql<CachedTheme>`
-      SELECT cards FROM theme_cards WHERE theme_key = ${themeKey}
+      SELECT cards FROM theme_cards WHERE theme_key = ${themeKey} LIMIT 1
     `;
     
     if (result.rows.length > 0) {
-      // Increment use count
-      await sql`
+      // Increment use count (non-blocking, don't wait for it)
+      sql`
         UPDATE theme_cards SET use_count = use_count + 1 WHERE theme_key = ${themeKey}
-      `;
+      `.catch(err => console.warn('[DB] Failed to increment use count:', err));
       
       console.log(`[DB] Cache hit for theme: "${theme}"`);
-      return result.rows[0].cards as unknown as Card[];
+      const cards = result.rows[0].cards as unknown as Card[];
+      // Ensure all cards have required fields
+      return Array.isArray(cards) ? cards : null;
     }
     
     return null;
   } catch (error) {
     console.error('[DB] Error getting cached theme cards:', error);
+    if (error instanceof Error) {
+      console.error('[DB] Error details:', error.message);
+    }
     return null;
   }
 }
@@ -141,10 +146,10 @@ export async function getCachedImageUrl(prompt: string): Promise<string | null> 
     const promptKey = normalizePrompt(prompt);
     
     const result = await sql<CachedImage>`
-      SELECT r2_url FROM card_images WHERE prompt_key = ${promptKey}
+      SELECT r2_url FROM card_images WHERE prompt_key = ${promptKey} LIMIT 1
     `;
     
-    if (result.rows.length > 0) {
+    if (result.rows.length > 0 && result.rows[0].r2_url) {
       console.log(`[DB] Image cache hit for prompt: "${prompt.slice(0, 30)}..."`);
       return result.rows[0].r2_url;
     }
@@ -152,6 +157,9 @@ export async function getCachedImageUrl(prompt: string): Promise<string | null> 
     return null;
   } catch (error) {
     console.error('[DB] Error getting cached image:', error);
+    if (error instanceof Error) {
+      console.error('[DB] Error details:', error.message);
+    }
     return null;
   }
 }

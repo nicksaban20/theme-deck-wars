@@ -39,7 +39,7 @@ interface ClaudeResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { theme, playerId, roomId, partyHost, count = DEFAULT_CARD_COUNT } = await request.json();
+    const { theme, playerId, roomId, partyHost, count = DEFAULT_CARD_COUNT, gameNumber, previousStrategy, opponentStrategy } = await request.json();
 
     if (!theme) {
       return NextResponse.json(
@@ -89,27 +89,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ cards: mockCards });
     }
 
-    const prompt = `Generate exactly ${cardCount} unique trading card game cards based on the theme: "${theme}"
+    // Adaptive generation: In games 2-3, generate counter/adaptive cards
+    let adaptiveContext = "";
+    if (gameNumber && gameNumber > 1) {
+      if (previousStrategy) {
+        adaptiveContext = `\n\nPrevious game context: Your previous strategy was "${previousStrategy}". Generate cards that complement or improve upon this strategy.`;
+      }
+      if (opponentStrategy) {
+        adaptiveContext += `\n\nOpponent's previous strategy: "${opponentStrategy}". Consider generating cards that can counter or adapt to this strategy while staying true to your theme.`;
+      }
+    }
+
+    const prompt = `Generate exactly ${cardCount} unique trading card game cards based on the theme: "${theme}"${adaptiveContext}
 
 Each card must have:
 - name: A creative name related to the theme (2-4 words max)
 - attack: A number between 1 and 8
 - defense: A number between 1 and 6
-- ability: A short special ability (one sentence, should reference game mechanics like "bonus damage", "first round", "low HP", etc.)
+- manaCost: A number between 1 and 5 (resource cost to play, higher = more powerful)
+- speed: A number between 1 and 10 (initiative/turn order, higher = faster)
+- rarity: One of "common", "rare", or "epic" (epic should be most powerful, common most basic)
+- ability: A short human-readable description of the card's special ability
 - flavorText: A funny or thematic one-liner quote
 - color: One of: amber, crimson, emerald, violet, cyan, rose, slate (pick colors that match the card's personality)
 - imagePrompt: A short, vivid description for AI art generation (e.g., "fierce warrior with glowing sword, dark fantasy style, dramatic lighting")
 - iconKeyword: A single word for icon mapping, must be one of: ${ICON_KEYWORDS.slice(0, 30).join(", ")}
+- perks: A structured object with optional arrays for different perk types:
+  * passive: Array of passive perks (always active)
+    - type: "damageReduction" | "damageBoost" | "healPerTurn" | "drawCard"
+    - value: number (for damage/heal) or boolean (for drawCard)
+  * triggered: Array of triggered perks (activate on events)
+    - type: "onPlay" | "onDeath" | "onFirstRound" | "onLastRound" | "onLowHP"
+    - effect: string description
+    - value: optional number
+  * combo: Array of combo perks (synergy with other cards)
+    - synergyWith: optional array of card names
+    - requiresColor: optional array of colors
+    - comboEffect: string description
+    - value: optional number
+  * status: Array of status effects (buffs/debuffs)
+    - type: string (e.g., "poison", "shield", "rage")
+    - value: number
+    - duration: optional number of rounds
 
 Important:
-- Make cards balanced (higher attack = lower defense generally)
-- Make abilities varied and interesting - include some powerful abilities and some situational ones
+- Balance: manaCost + attack + defense should total approximately 10-15
+- Higher manaCost cards should be more powerful (higher attack/defense or better perks)
+- Speed should correlate with card type (fast attackers = high speed, slow tanks = low speed)
+- Rarity distribution: 3-4 common, 2-3 rare, 1 epic per set
+- Make abilities varied and interesting
 - Keep flavor text witty and theme-appropriate
 - Each card should feel unique within the set
 - Create a mix of aggressive (high attack) and defensive (high defense) cards
-- Include 1-2 "star" cards that are clearly more powerful but balanced with situational abilities
+- Include 1-2 "star" cards (epic rarity) that are clearly more powerful
 - Make imagePrompt descriptive but concise (under 100 characters), suitable for fantasy card art
 - Choose iconKeyword that best represents the card's theme or ability
+- Perks should be balanced - don't make cards overpowered
 
 Respond ONLY with a valid JSON object in this exact format, no other text:
 {
@@ -118,11 +153,23 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       "name": "Example Name",
       "attack": 5,
       "defense": 3,
+      "manaCost": 2,
+      "speed": 7,
+      "rarity": "rare",
       "ability": "Deal 2 bonus damage if this is the first round",
       "flavorText": "A witty quote here",
       "color": "violet",
       "imagePrompt": "mystical warrior with glowing purple aura, fantasy art style",
-      "iconKeyword": "sword"
+      "iconKeyword": "sword",
+      "perks": {
+        "triggered": [
+          {
+            "type": "onFirstRound",
+            "effect": "Deal 2 bonus damage",
+            "value": 2
+          }
+        ]
+      }
     }
   ]
 }`;
@@ -170,16 +217,63 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       if (!jsonMatch) {
         throw new Error("No JSON found in response");
       }
-      const parsed = JSON.parse(jsonMatch[0]);
-      cards = parsed.cards.map((card: Omit<Card, 'id'>, index: number) => ({
-        ...card,
-        id: `${playerId || 'card'}-${index}-${Date.now()}`,
-        // Ensure art fields exist with fallbacks
-        imagePrompt: card.imagePrompt || `${card.name}, fantasy trading card art style`,
-        iconKeyword: card.iconKeyword || getDefaultIcon(card.color),
-      }));
+      const parsed = JSON.parse(jsonMatch[0]) as { cards?: unknown[] };
+      if (!parsed.cards || !Array.isArray(parsed.cards)) {
+        throw new Error("Invalid card structure in Claude response");
+      }
+      
+      interface RawCard {
+        name?: string;
+        attack?: number;
+        defense?: number;
+        ability?: string;
+        flavorText?: string;
+        color?: string;
+        manaCost?: number;
+        speed?: number;
+        rarity?: string;
+        perks?: unknown;
+        imagePrompt?: string;
+        iconKeyword?: string;
+      }
+      
+      cards = (parsed.cards as RawCard[]).map((card, index: number) => {
+        // Validate and sanitize card data
+        const validColor = (card.color && ['amber', 'crimson', 'emerald', 'violet', 'cyan', 'rose', 'slate'].includes(card.color))
+          ? card.color
+          : 'slate';
+        
+        return {
+          id: `${playerId || 'card'}-${index}-${Date.now()}`,
+          name: card.name || `Card ${index + 1}`,
+          attack: typeof card.attack === 'number' ? Math.max(1, Math.min(8, card.attack)) : 3,
+          defense: typeof card.defense === 'number' ? Math.max(1, Math.min(6, card.defense)) : 2,
+          ability: card.ability || '',
+          flavorText: card.flavorText || '',
+          color: validColor,
+          // New stats with defaults for backward compatibility
+          manaCost: typeof card.manaCost === 'number' ? Math.max(1, Math.min(5, card.manaCost)) : 1,
+          speed: typeof card.speed === 'number' ? Math.max(1, Math.min(10, card.speed)) : 5,
+          rarity: (card.rarity && ['common', 'rare', 'epic'].includes(card.rarity)) ? card.rarity : 'common',
+          perks: (card.perks && typeof card.perks === 'object') ? card.perks : {},
+          // Art fields with fallbacks
+          imagePrompt: card.imagePrompt || `${card.name || 'card'}, fantasy trading card art style`,
+          iconKeyword: card.iconKeyword || getDefaultIcon(validColor),
+        } as Card;
+      });
+      
+      // Ensure we have the right number of cards
+      if (cards.length < cardCount) {
+        console.warn(`[Cards] Only got ${cards.length} cards, generating ${cardCount - cards.length} more`);
+        const additionalCards = generateMockCards(theme, cardCount - cards.length);
+        cards = [...cards, ...additionalCards];
+      }
     } catch (parseError) {
-      console.error("Failed to parse Claude response:", textContent.text);
+      console.error("[Cards] Failed to parse Claude response:", parseError);
+      if (parseError instanceof Error) {
+        console.error("[Cards] Error details:", parseError.message);
+      }
+      console.error("[Cards] Response preview:", textContent.text?.slice(0, 500));
       cards = generateMockCards(theme, cardCount);
     }
 
@@ -278,7 +372,11 @@ function generateMockCards(theme: string, count: number): Card[] {
     ability: template.ability,
     flavorText: `A legendary ${baseName.toLowerCase()} of great power.`,
     color: CARD_COLORS[index % CARD_COLORS.length],
+    manaCost: Math.min(3, Math.floor((template.attack + template.defense) / 3)),
+    speed: 5 + (index % 3) - 1, // Vary speed between 4-6
+    rarity: index < 4 ? 'common' : index < 6 ? 'rare' : 'epic',
+    perks: {},
     imagePrompt: `${template.prefix.toLowerCase()} ${baseName.toLowerCase()}, epic fantasy card art, dramatic lighting`,
     iconKeyword: template.icon,
-  }));
+  } as Card));
 }

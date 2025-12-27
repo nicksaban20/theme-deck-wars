@@ -8,9 +8,11 @@ interface LobbyProps {
   gameState: GameState;
   onJoin: (playerName: string) => void;
   hasJoined: boolean;
+  onToggleBlindDraft?: () => void;
+  isRoomCreator?: boolean;
 }
 
-export function Lobby({ roomId, gameState, onJoin, hasJoined }: LobbyProps) {
+export function Lobby({ roomId, gameState, onJoin, hasJoined, onToggleBlindDraft, isRoomCreator }: LobbyProps) {
   const [copied, setCopied] = useState(false);
   const [copiedSpectate, setCopiedSpectate] = useState(false);
   

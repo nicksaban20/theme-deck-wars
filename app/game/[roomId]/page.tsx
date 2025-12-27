@@ -7,9 +7,11 @@ import { Lobby } from "@/components/Lobby";
 import { ThemePicker } from "@/components/ThemePicker";
 import { GeneratingCards } from "@/components/GeneratingCards";
 import { DraftPhase } from "@/components/DraftPhase";
+import { RevealPhase } from "@/components/RevealPhase";
 import { BattleArena } from "@/components/BattleArena";
 import { RoundOver } from "@/components/RoundOver";
 import { GameOver } from "@/components/GameOver";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DRAFT_POOL_SIZE } from "@/lib/gameLogic";
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999";
@@ -41,6 +43,8 @@ export default function GamePage() {
     draftSelect,
     draftDiscard,
     draftConfirm,
+    revealCard,
+    toggleBlindDraft,
     playCard,
     continueMatch,
     requestRematch,
@@ -74,14 +78,6 @@ export default function GamePage() {
     }
   }, [gameState, connected, playerName, connectionId, isSpectatorMode]);
 
-  // Trigger card generation when entering generating phase
-  useEffect(() => {
-    if (gameState?.phase === "generating" && !isGenerating && connectionId && !isSpectatorMode) {
-      setIsGenerating(true);
-      generateCards();
-    }
-  }, [gameState?.phase, isGenerating, connectionId, isSpectatorMode]);
-
   // Reset generating flag when phase changes away from generating
   useEffect(() => {
     if (gameState?.phase !== "generating") {
@@ -89,36 +85,80 @@ export default function GamePage() {
     }
   }, [gameState?.phase]);
 
+  // Trigger card generation when entering generating phase
+  useEffect(() => {
+    if (gameState?.phase === "generating" && !isGenerating && connectionId && !isSpectatorMode) {
+      // Small delay to ensure state is fully updated
+      const timeoutId = setTimeout(() => {
+        setIsGenerating(true);
+        generateCards();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [gameState?.phase, isGenerating, connectionId, isSpectatorMode, generateCards]);
+
   const generateCards = useCallback(async () => {
-    if (!gameState || !connectionId) return;
+    if (!gameState || !connectionId) {
+      console.log('[generateCards] Missing gameState or connectionId', { gameState: !!gameState, connectionId });
+      return;
+    }
 
     const currentPlayer = gameState.players[connectionId];
-    if (!currentPlayer?.theme) return;
+    if (!currentPlayer?.theme) {
+      console.log('[generateCards] Missing player or theme', { currentPlayer: !!currentPlayer, theme: currentPlayer?.theme });
+      return;
+    }
 
     // Only the first player generates cards for both
     const isFirstPlayer = gameState.playerOrder[0] === connectionId;
     
     if (isFirstPlayer) {
+      console.log('[generateCards] First player generating cards for both players');
       for (const playerId of gameState.playerOrder) {
         const player = gameState.players[playerId];
-        if (!player?.theme) continue;
+        if (!player?.theme) {
+          console.log(`[generateCards] Skipping player ${playerId} - no theme`);
+          continue;
+        }
 
         try {
-          await fetch("/api/generate-cards", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              theme: player.theme,
-              playerId: playerId,
-              roomId: roomId,
-              partyHost: PARTYKIT_HOST,
-              count: DRAFT_POOL_SIZE, // Generate 7 for draft
-            }),
-          });
+            // Get strategy info from previous games for adaptive generation
+            const lastGame = gameState.gameHistory && gameState.gameHistory.length > 0 
+              ? gameState.gameHistory[gameState.gameHistory.length - 1] 
+              : null;
+            const isPlayer1 = gameState.playerOrder[0] === playerId;
+            const previousStrategy = lastGame ? (isPlayer1 ? lastGame.player1Strategy : lastGame.player2Strategy) : undefined;
+            const opponentStrategy = lastGame ? (isPlayer1 ? lastGame.player2Strategy : lastGame.player1Strategy) : undefined;
+            
+            console.log(`[generateCards] Generating cards for ${player.name} with strategy:`, previousStrategy || 'balanced');
+
+            const response = await fetch("/api/generate-cards", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                theme: player.theme,
+                playerId: playerId,
+                roomId: roomId,
+                partyHost: PARTYKIT_HOST,
+                count: DRAFT_POOL_SIZE, // Generate 9 for draft
+                gameNumber: gameState.gameNumber,
+                previousStrategy,
+                opponentStrategy,
+              }),
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+            
+            console.log(`[generateCards] Successfully generated cards for ${player.name}`);
         } catch (error) {
-          console.error("Failed to generate cards:", error);
+          console.error(`[generateCards] Failed to generate cards for ${player.name}:`, error);
+          // Don't return early - continue generating for other players
         }
       }
+    } else {
+      console.log('[generateCards] Not first player, waiting for cards to be generated');
     }
   }, [gameState, connectionId, roomId]);
 
@@ -166,15 +206,20 @@ export default function GamePage() {
   // Check if user is actually a spectator (not in players list)
   const isActualSpectator = isSpectatorMode || Boolean(connectionId && !gameState.players[connectionId]);
 
-  // Render based on game phase
-  switch (gameState.phase) {
+  // Wrap all game phases in error boundary
+  const renderGameContent = () => {
+    // Render based on game phase
+    switch (gameState.phase) {
     case "lobby":
+      const isRoomCreator = gameState.playerOrder[0] === connectionId;
       return (
         <Lobby
           roomId={roomId}
           gameState={gameState}
           onJoin={join}
           hasJoined={hasJoined}
+          onToggleBlindDraft={toggleBlindDraft}
+          isRoomCreator={isRoomCreator}
         />
       );
 
@@ -295,5 +340,12 @@ export default function GamePage() {
           <p className="text-gray-400">Unknown game state</p>
         </div>
       );
-  }
+    }
+  };
+
+  return (
+    <ErrorBoundary>
+      {renderGameContent()}
+    </ErrorBoundary>
+  );
 }

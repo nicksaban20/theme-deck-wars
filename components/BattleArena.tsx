@@ -5,6 +5,7 @@ import { HealthBar } from "./HealthBar";
 import { Hand } from "./Hand";
 import { CardMini } from "./Card";
 import { CardWithArt } from "./CardWithArt";
+import { ManaDisplay } from "./ManaDisplay";
 
 interface BattleArenaProps {
   gameState: GameState;
@@ -85,6 +86,13 @@ export function BattleArena({
           >
             Round {gameState.round}
           </h1>
+          {gameState.roundModifier && (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-full border border-violet-400/40 mb-2">
+              <span className="text-violet-300 text-sm font-semibold">
+                {gameState.roundModifier}
+              </span>
+            </div>
+          )}
           <p className="text-gray-400">{gameState.message}</p>
         </div>
 
@@ -116,6 +124,26 @@ export function BattleArena({
                   isOpponent={true}
                   lastDamage={lastCardPlayed?.playerId === currentPlayerId ? lastCardPlayed.damage : null}
                 />
+                <div className="mt-2 flex items-center justify-center gap-3">
+                  <ManaDisplay 
+                    current={opponent.mana ?? 3} 
+                    max={opponent.maxMana ?? 5} 
+                    size="sm" 
+                  />
+                  {opponent.statusEffects && opponent.statusEffects.length > 0 && (
+                    <div className="flex gap-1">
+                      {opponent.statusEffects.map((effect, i) => (
+                        <span 
+                          key={i}
+                          className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
+                          title={`${effect.type}: ${effect.value}`}
+                        >
+                          {effect.type[0].toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="mt-2 text-center text-sm text-gray-400">
                   Theme: <span className="text-amber-400">&quot;{opponent.theme}&quot;</span>
                   <span className="ml-2 text-violet-400">({opponent.matchWins} wins)</span>
@@ -240,6 +268,26 @@ export function BattleArena({
                     isCurrentTurn={isMyTurn}
                     lastDamage={lastCardPlayed?.playerId !== currentPlayerId ? lastCardPlayed?.damage : null}
                   />
+                  <div className="mt-2 flex items-center justify-center gap-3">
+                    <ManaDisplay 
+                      current={currentPlayer.mana ?? 3} 
+                      max={currentPlayer.maxMana ?? 5} 
+                      size="md" 
+                    />
+                    {currentPlayer.statusEffects && currentPlayer.statusEffects.length > 0 && (
+                      <div className="flex gap-1">
+                        {currentPlayer.statusEffects.map((effect, i) => (
+                          <span 
+                            key={i}
+                            className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
+                            title={`${effect.type}: ${effect.value} (${effect.duration ?? 1} rounds)`}
+                          >
+                            {effect.type[0].toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="mt-2 text-center text-sm text-gray-400">
                     Theme: <span className="text-amber-400">&quot;{currentPlayer.theme}&quot;</span>
                     <span className="ml-2 text-violet-400">({currentPlayer.matchWins} wins)</span>
@@ -250,14 +298,16 @@ export function BattleArena({
 
             {/* Player's Hand */}
             <div className="bg-gradient-to-t from-black/30 to-transparent rounded-t-3xl pt-6 pb-4 px-4">
-              {currentPlayer && (
-                <Hand
-                  cards={currentPlayer.cards}
-                  onPlayCard={onPlayCard}
-                  isCurrentTurn={isMyTurn}
-                  disabled={gameState.phase !== "battle"}
-                />
-              )}
+                {currentPlayer && (
+                  <Hand
+                    cards={currentPlayer.cards}
+                    onPlayCard={onPlayCard}
+                    isCurrentTurn={isMyTurn}
+                    disabled={gameState.phase !== "battle"}
+                    player={currentPlayer}
+                    gameState={gameState}
+                  />
+                )}
             </div>
           </div>
         )}

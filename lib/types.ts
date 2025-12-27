@@ -1,20 +1,60 @@
 // Card Types
 export type CardColor = 'amber' | 'crimson' | 'emerald' | 'violet' | 'cyan' | 'rose' | 'slate';
+export type CardRarity = 'common' | 'rare' | 'epic';
 
 // Art style options for cards
 export type CardArtStyle = 'pattern' | 'ai' | 'icons';
+
+// Perk Types
+export interface PassivePerk {
+  type: 'damageReduction' | 'damageBoost' | 'healPerTurn' | 'drawCard';
+  value: number | boolean;
+}
+
+export interface TriggeredPerk {
+  type: 'onPlay' | 'onDeath' | 'onFirstRound' | 'onLastRound' | 'onLowHP';
+  effect: string;
+  value?: number;
+}
+
+export interface ComboPerk {
+  synergyWith?: string[]; // Card names that trigger combo
+  requiresColor?: CardColor[]; // Colors that trigger combo
+  comboEffect: string;
+  value?: number;
+}
+
+export interface StatusEffect {
+  type: string; // e.g., 'poison', 'shield', 'rage'
+  value: number;
+  duration?: number; // Rounds remaining
+}
+
+export interface CardPerks {
+  passive?: PassivePerk[];
+  triggered?: TriggeredPerk[];
+  combo?: ComboPerk[];
+  status?: StatusEffect[];
+}
 
 export interface Card {
   id: string;
   name: string;
   attack: number;
   defense: number;
-  ability: string;
+  ability: string; // Human-readable description (kept for backward compatibility)
   flavorText: string;
   color: CardColor;
+  // New stats
+  manaCost: number; // Resource cost to play (1-5)
+  speed: number; // Initiative/turn order (1-10, higher = faster)
+  health?: number; // Optional: survives multiple rounds (if > 0)
+  rarity: CardRarity; // Affects draft availability
+  // Structured perks
+  perks?: CardPerks;
   // Art generation fields
-  imagePrompt?: string; // For Pollinations.ai AI-generated art
-  iconKeyword?: string; // For Game-icons.net icon mapping
+  imagePrompt?: string; // For AI-generated art
+  iconKeyword?: string; // For icon mapping
 }
 
 // Player Types
@@ -24,12 +64,18 @@ export interface Player {
   theme: string;
   originalTheme: string; // Track original theme for swap
   cards: Card[];
-  draftPool: Card[]; // Cards available during draft (7 cards)
+  draftPool: Card[]; // Cards available during draft (9 cards)
   draftedCards: Card[]; // Cards selected during draft (5 cards)
+  revealedCard: Card | null; // Card revealed in reveal phase
+  isRevealReady: boolean; // Has selected card to reveal
   hp: number;
+  mana: number; // Current mana pool
+  maxMana: number; // Maximum mana (increases per turn)
   isReady: boolean;
   isDraftReady: boolean; // Has finished drafting
   matchWins: number; // Wins in current best-of-3
+  // Active status effects
+  statusEffects?: StatusEffect[];
 }
 
 // Game State
@@ -38,6 +84,7 @@ export type GamePhase =
   | 'theme-select' 
   | 'generating' 
   | 'drafting'  // New phase for card selection
+  | 'reveal'    // Card reveal phase before battle
   | 'battle' 
   | 'round-ended' // Single round ended, match continues
   | 'match-ended'; // Best-of-3 complete
@@ -63,13 +110,21 @@ export interface GameState {
   roundWinner: string | null; // Winner of current round/game
   matchWinner: string | null; // Winner of best-of-3
   message: string;
+  // Round modifier for current round
+  roundModifier: string | null; // Name of active round modifier
+  // Draft mode
+  blindDraft: boolean; // If true, hide opponent's picks during draft
   // Match history
   gameHistory: {
     gameNumber: number;
     winner: string | null;
     player1HP: number;
     player2HP: number;
+    player1Strategy?: string; // Track winning strategy
+    player2Strategy?: string;
   }[];
+  // Speed-based turn order for current round
+  speedOrder?: string[]; // Player IDs ordered by card speed
 }
 
 // Message Types for PartyKit
@@ -80,11 +135,13 @@ export type ClientMessage =
   | { type: 'draft-select'; cardId: string } // Select a card during draft
   | { type: 'draft-discard'; cardId: string } // Discard a card during draft
   | { type: 'draft-confirm' } // Confirm draft selection
+  | { type: 'reveal-card'; cardId: string } // Select card to reveal
   | { type: 'play-card'; cardId: string }
   | { type: 'continue-match' } // Continue to next game in best-of-3
   | { type: 'request-rematch' } // Request a rematch
   | { type: 'request-swap-rematch' } // Request rematch with swapped themes
-  | { type: 'accept-rematch' }; // Accept rematch request
+  | { type: 'accept-rematch' } // Accept rematch request
+  | { type: 'toggle-blind-draft' }; // Toggle blind draft mode (lobby only)
 
 export type ServerMessage =
   | { type: 'state'; state: GameState }

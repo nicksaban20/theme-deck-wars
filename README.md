@@ -6,14 +6,19 @@ A generative AI card battler where you pick any theme and battle with AI-generat
 
 1. **Create a game** and share the 4-letter room code with a friend
 2. **Pick your themes** - anything goes! ("90s Cartoons" vs "Medieval Weapons")
-3. **AI generates cards** - Claude creates 5 unique cards per player based on your themes
-4. **Battle!** - Take turns playing cards to reduce your opponent's HP to zero
+3. **AI generates cards** - Claude creates 7 unique cards per player based on your themes
+4. **Draft your deck** - Select 5 cards from your pool of 7
+5. **Battle in Best of 3!** - Take turns playing cards with mana costs, speed-based turn order, and special perks
+6. **Win the match** - First to win 2 games takes the match!
 
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React, Tailwind CSS 4
 - **Realtime Multiplayer**: PartyKit (WebSocket-based rooms)
 - **AI Card Generation**: Anthropic Claude API
+- **AI Image Generation**: Cloudflare Workers AI (Flux-1 Schnell)
+- **Database**: Vercel Postgres (theme & image caching, game history)
+- **Storage**: Vercel Blob (generated card images)
 - **Styling**: Custom card designs with themed gradients
 
 ## Getting Started
@@ -22,6 +27,8 @@ A generative AI card battler where you pick any theme and battle with AI-generat
 
 - Node.js 18+
 - An Anthropic API key (for card generation)
+- Cloudflare account (optional, for AI image generation)
+- Vercel account (optional, for database and blob storage)
 
 ### Installation
 
@@ -32,8 +39,17 @@ npm install
 # Create environment file
 cp .env.local.example .env.local
 
-# Add your Anthropic API key to .env.local
+# Add your API keys to .env.local
+# Required:
 # ANTHROPIC_API_KEY=your-key-here
+# NEXT_PUBLIC_PARTYKIT_HOST=localhost:1999 (or your PartyKit URL)
+#
+# Optional (for production):
+# CLOUDFLARE_ACCOUNT_ID=your-account-id
+# CLOUDFLARE_API_TOKEN=your-api-token
+# POSTGRES_URL=your-postgres-url
+# BLOB_READ_WRITE_TOKEN=your-blob-token
+# NEXT_PUBLIC_APP_URL=https://your-app-url.com
 ```
 
 ### Development
@@ -60,25 +76,37 @@ Open [http://localhost:3000](http://localhost:3000) to play!
 
 2. **Deploy to Vercel**:
    - Connect your repo to Vercel
-   - Set environment variables:
-     - `ANTHROPIC_API_KEY` - Your Anthropic API key
-     - `NEXT_PUBLIC_PARTYKIT_HOST` - Your PartyKit URL (without https://)
+   - Set environment variables (see DEPLOY.md for details):
+     - `ANTHROPIC_API_KEY` - Your Anthropic API key (required)
+     - `NEXT_PUBLIC_PARTYKIT_HOST` - Your PartyKit URL (required)
+     - `CLOUDFLARE_ACCOUNT_ID` - Cloudflare account ID (optional, for AI images)
+     - `CLOUDFLARE_API_TOKEN` - Cloudflare API token (optional, for AI images)
+     - `POSTGRES_URL` - Vercel Postgres connection string (optional, for caching)
+     - `BLOB_READ_WRITE_TOKEN` - Vercel Blob token (optional, for image storage)
+     - `NEXT_PUBLIC_APP_URL` - Your app URL (optional, for game history)
 
 ## Game Rules
 
-- Each player starts with **20 HP**
-- You receive **5 cards** based on your theme
+- Each player starts with **20 HP** and **3 Mana**
+- You draft **5 cards** from a pool of 7 generated cards
+- **Mana System**: Cards cost mana to play (1-5), mana regenerates each turn
+- **Speed System**: Higher speed cards act first in each round
 - **Attack > Defense** = Damage dealt
-- Play all 5 cards across 5 rounds
-- First to reduce opponent's HP to **0** wins!
+- **Best of 3**: First to win 2 games wins the match
+- Play all 5 cards across 5 rounds per game
+- First to reduce opponent's HP to **0** wins the game!
 
-### Card Abilities
+### Card Stats & Perks
 
-Cards may have special abilities that trigger based on:
-- First/final round bonuses
-- Low HP conditions
-- Name-based interactions
-- Random double damage
+Each card has:
+- **Mana Cost** (1-5): Resource cost to play
+- **Speed** (1-10): Turn order (higher = faster)
+- **Rarity**: Common, Rare, or Epic
+- **Perks**: Special abilities that activate automatically:
+  - **Passive**: Always active (damage boost, damage reduction, healing)
+  - **Triggered**: Activates on specific events (onPlay, onDeath, onFirstRound, etc.)
+  - **Combo**: Activates with specific card synergies or color combinations
+  - **Status Effects**: Applies buffs/debuffs (poison, shield, rage, etc.)
 
 ## Project Structure
 

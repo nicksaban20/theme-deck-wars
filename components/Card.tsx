@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card as CardType, CardColor, CardArtStyle } from "@/lib/types";
+import { getCardDefaults } from "@/lib/gameLogic";
+import { PerkBadge } from "./PerkBadge";
+import { ManaCostBadge } from "./ManaDisplay";
 
 interface CardProps {
   card: CardType;
@@ -88,10 +91,24 @@ export function Card({
   showAbility = true,
   artStyle = "pattern",
 }: CardProps) {
-  const colors = colorClasses[card.color] || colorClasses.slate;
+  // Memoize card defaults to avoid recalculating on every render
+  const cardWithDefaults = useMemo(() => getCardDefaults(card), [card]);
+  const colors = useMemo(() => colorClasses[card.color] || colorClasses.slate, [card.color]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  
+  const rarityColors = useMemo(() => ({
+    common: "text-gray-300",
+    rare: "text-blue-300",
+    epic: "text-purple-300",
+  }), []);
+  
+  const rarityIcons = useMemo(() => ({
+    common: "⚪",
+    rare: "🔵",
+    epic: "🟣",
+  }), []);
 
   // Fetch AI image when in AI mode
   useEffect(() => {
@@ -119,14 +136,22 @@ export function Card({
       try {
         const prompt = card.imagePrompt || `${card.name}, fantasy trading card art`;
         
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, cardId: card.id }),
+          signal: controller.signal,
         });
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-          throw new Error("Failed to generate image");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}: Failed to generate image`);
         }
 
         const data = await response.json();
@@ -136,7 +161,11 @@ export function Card({
           throw new Error("No image in response");
         }
       } catch (error) {
-        console.error("Error fetching AI image:", error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn(`[Card] Image request timeout for ${card.name}`);
+        } else {
+          console.error(`[Card] Error fetching AI image for ${card.name}:`, error);
+        }
         setHasError(true);
       } finally {
         setIsLoading(false);
@@ -257,47 +286,128 @@ export function Card({
       
       {/* Card content */}
       <div className="relative h-full flex flex-col p-3">
-        {/* Header - Name */}
+        {/* Header - Name, Mana Cost, Rarity */}
         <div className="bg-black/40 rounded-lg px-2 py-1 mb-2 backdrop-blur-sm">
-          <h3 
-            className="font-bold text-white text-center truncate"
-            style={{ 
-              fontFamily: "var(--font-display)",
-              fontSize: size === "sm" ? "0.7rem" : size === "md" ? "0.85rem" : "1rem"
-            }}
-          >
-            {card.name}
-          </h3>
+          <div className="flex items-center justify-between gap-1">
+            <ManaCostBadge 
+              cost={cardWithDefaults.manaCost} 
+              available={999} 
+              size={size === "sm" ? "sm" : "md"}
+            />
+            <h3 
+              className="font-bold text-white text-center truncate flex-1"
+              style={{ 
+                fontFamily: "var(--font-display)",
+                fontSize: size === "sm" ? "0.7rem" : size === "md" ? "0.85rem" : "1rem"
+              }}
+            >
+              {card.name}
+            </h3>
+            <div className={`${rarityColors[cardWithDefaults.rarity]} text-xs`} title={`${cardWithDefaults.rarity} card`}>
+              {rarityIcons[cardWithDefaults.rarity]}
+            </div>
+          </div>
+          {cardWithDefaults.perks && Object.keys(cardWithDefaults.perks).length > 0 && (
+            <div className="mt-1 flex justify-center">
+              <PerkBadge perks={cardWithDefaults.perks} size={size === "sm" ? "sm" : "md"} />
+            </div>
+          )}
         </div>
 
         {/* Art area */}
         {renderArtArea()}
 
-        {/* Stats */}
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-1 bg-red-900/70 px-2 py-1 rounded-lg backdrop-blur-sm">
+        {/* Stats Row 1: Attack, Defense, Speed */}
+        <div className="flex justify-between items-center mb-1 gap-1">
+          <div className="flex items-center gap-1 bg-red-900/70 px-2 py-1 rounded-lg backdrop-blur-sm flex-1">
             <span className="text-red-300 text-xs">⚔️</span>
-            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>
-              {card.attack}
+            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.75rem" : "0.9rem" }}>
+              {cardWithDefaults.attack}
             </span>
           </div>
-          <div className="flex items-center gap-1 bg-blue-900/70 px-2 py-1 rounded-lg backdrop-blur-sm">
+          <div className="flex items-center gap-1 bg-blue-900/70 px-2 py-1 rounded-lg backdrop-blur-sm flex-1">
             <span className="text-blue-300 text-xs">🛡️</span>
-            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>
-              {card.defense}
+            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.75rem" : "0.9rem" }}>
+              {cardWithDefaults.defense}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 bg-purple-900/70 px-2 py-1 rounded-lg backdrop-blur-sm" title={`Speed: ${cardWithDefaults.speed}`}>
+            <span className="text-purple-300 text-xs">⚡</span>
+            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.7rem" : "0.8rem" }}>
+              {cardWithDefaults.speed}
             </span>
           </div>
         </div>
 
-        {/* Ability */}
+        {/* Stats Row 2: Health (if present) */}
+        {cardWithDefaults.health !== undefined && cardWithDefaults.health > 0 && (
+          <div className="flex justify-center items-center mb-1">
+            <div className="flex items-center gap-1 bg-green-900/70 px-2 py-0.5 rounded-lg backdrop-blur-sm">
+              <span className="text-green-300 text-xs">❤️</span>
+              <span className="font-bold text-white text-xs">
+                {cardWithDefaults.health} HP
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Perks/Abilities - Show structured perks if available, otherwise fallback to ability text */}
         {showAbility && size !== "sm" && (
           <div className="bg-black/50 rounded-lg px-2 py-1 backdrop-blur-sm">
-            <p 
-              className={`${colors.accent} text-center leading-tight`}
-              style={{ fontSize: size === "md" ? "0.6rem" : "0.7rem" }}
-            >
-              {card.ability}
-            </p>
+            {cardWithDefaults.perks && Object.keys(cardWithDefaults.perks).length > 0 ? (
+              <div className="space-y-0.5">
+                {/* Passive Perks */}
+                {cardWithDefaults.perks.passive && cardWithDefaults.perks.passive.length > 0 && (
+                  <div className="text-center">
+                    {cardWithDefaults.perks.passive.map((perk, i) => (
+                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
+                        {perk.type === 'damageReduction' && `🛡️ -${perk.value} damage taken`}
+                        {perk.type === 'damageBoost' && `⚔️ +${perk.value} attack`}
+                        {perk.type === 'healPerTurn' && `💚 +${perk.value} HP/turn`}
+                        {perk.type === 'drawCard' && `📖 Draw card`}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {/* Triggered Perks */}
+                {cardWithDefaults.perks.triggered && cardWithDefaults.perks.triggered.length > 0 && (
+                  <div className="text-center">
+                    {cardWithDefaults.perks.triggered.map((perk, i) => (
+                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
+                        ✨ {perk.effect}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {/* Combo Perks */}
+                {cardWithDefaults.perks.combo && cardWithDefaults.perks.combo.length > 0 && (
+                  <div className="text-center">
+                    {cardWithDefaults.perks.combo.map((perk, i) => (
+                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
+                        🔗 {perk.comboEffect}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {/* Status Effects */}
+                {cardWithDefaults.perks.status && cardWithDefaults.perks.status.length > 0 && (
+                  <div className="text-center">
+                    {cardWithDefaults.perks.status.map((effect, i) => (
+                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
+                        {effect.type}: {effect.value} {effect.duration ? `(${effect.duration} turns)` : ''}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : cardWithDefaults.ability ? (
+              <p 
+                className={`${colors.accent} text-center leading-tight`}
+                style={{ fontSize: size === "md" ? "0.6rem" : "0.7rem" }}
+              >
+                {cardWithDefaults.ability}
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -335,6 +445,7 @@ function getCardEmoji(color: CardColor): string {
 // Compact card for displaying in battle history
 export function CardMini({ card }: { card: CardType }) {
   const colors = colorClasses[card.color] || colorClasses.slate;
+  const cardWithDefaults = getCardDefaults(card);
   
   return (
     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r ${colors.gradient}`}>
@@ -342,7 +453,8 @@ export function CardMini({ card }: { card: CardType }) {
         {card.name}
       </span>
       <span className="text-white/80 text-xs">
-        ⚔️{card.attack} 🛡️{card.defense}
+        ⚔️{cardWithDefaults.attack} 🛡️{cardWithDefaults.defense} 💎{cardWithDefaults.manaCost} ⚡{cardWithDefaults.speed}
+        {cardWithDefaults.health !== undefined && cardWithDefaults.health > 0 && ` ❤️${cardWithDefaults.health}`}
       </span>
     </div>
   );

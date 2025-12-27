@@ -1,16 +1,20 @@
 "use client";
 
-import { Card as CardType } from "@/lib/types";
+import { Card as CardType, GameState } from "@/lib/types";
 import { CardWithArt } from "./CardWithArt";
+import { canPlayCard, getCardDefaults, getEffectiveManaCost } from "@/lib/gameLogic";
+import { Player } from "@/lib/types";
 
 interface HandProps {
   cards: CardType[];
   onPlayCard?: (cardId: string) => void;
   isCurrentTurn: boolean;
   disabled?: boolean;
+  player?: Player; // For mana checking
+  gameState?: GameState; // For round modifiers
 }
 
-export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false }: HandProps) {
+export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, player, gameState }: HandProps) {
   if (cards.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -70,8 +74,8 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false }: Han
                 <CardWithArt
                   card={card}
                   onClick={onPlayCard ? () => onPlayCard(card.id) : undefined}
-                  isPlayable={isCurrentTurn && !disabled}
-                  disabled={disabled || !isCurrentTurn}
+                  isPlayable={isCurrentTurn && !disabled && (player && gameState ? canPlayCard(player, card, gameState) : true)}
+                  disabled={disabled || !isCurrentTurn || (player && gameState ? !canPlayCard(player, card, gameState) : false)}
                   size="md"
                   showAbility={true}
                 />
