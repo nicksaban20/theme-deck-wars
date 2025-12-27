@@ -37,16 +37,15 @@ async function generateCardImage(card: Card): Promise<string | null> {
   }
 }
 
-// Generate images for all cards in parallel
+// Generate images for all cards (sequentially to avoid overwhelming SD server)
 async function generateImagesForCards(cards: Card[]): Promise<Card[]> {
-  console.log(`[Cards] Generating images for ${cards.length} cards...`);
+  console.log(`[Cards] Generating images for ${cards.length} cards (sequentially)...`);
 
-  const cardsWithImages = await Promise.all(
-    cards.map(async (card) => {
-      const imageUrl = await generateCardImage(card);
-      return imageUrl ? { ...card, imageUrl } : card;
-    })
-  );
+  const cardsWithImages: Card[] = [];
+  for (const card of cards) {
+    const imageUrl = await generateCardImage(card);
+    cardsWithImages.push(imageUrl ? { ...card, imageUrl } : card);
+  }
 
   const successCount = cardsWithImages.filter(c => c.imageUrl).length;
   console.log(`[Cards] Generated ${successCount}/${cards.length} images`);
@@ -238,7 +237,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
 
     // Add timeout to prevent indefinite waiting
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     let response: Response;
     try {
@@ -460,8 +459,9 @@ async function sendCardsToParty(
 }
 
 function generateMockCards(theme: string, count: number): Card[] {
-  const themeWords = theme.split(" ");
-  const baseName = themeWords[0] || "Mystery";
+  // Use last word of theme for better naming (e.g., "Famous Scientists" -> "Scientists")
+  const themeWords = theme.split(" ").filter(w => w.length > 0);
+  const baseName = themeWords[themeWords.length - 1] || themeWords[0] || "Mystery";
 
   const cardTemplates = [
     { prefix: "Mighty", attack: 7, defense: 2, ability: "Deal 2 bonus damage on the first round", icon: "sword" },
@@ -471,6 +471,8 @@ function generateMockCards(theme: string, count: number): Card[] {
     { prefix: "Noble", attack: 3, defense: 6, ability: "Reduce incoming damage by 1", icon: "shield" },
     { prefix: "Fierce", attack: 8, defense: 1, ability: "If opponent's last card had higher defense, deal +3", icon: "fire" },
     { prefix: "Guardian", attack: 2, defense: 6, ability: "Heal 2 HP after playing this card", icon: "heart" },
+    { prefix: "Mystic", attack: 4, defense: 5, ability: "Gain +1 attack for each round played", icon: "wand" },
+    { prefix: "Elite", attack: 6, defense: 4, ability: "Deal 1 bonus damage per card played this game", icon: "star" },
   ];
 
   return cardTemplates.slice(0, count).map((template, index) => ({
