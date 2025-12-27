@@ -41,10 +41,15 @@ export async function POST(request: NextRequest) {
 
     // 1. Check database cache first (persistent)
     if (POSTGRES_URL) {
-      const cachedUrl = await getCachedImageUrl(normalizedPrompt);
-      if (cachedUrl) {
-        console.log(`[Image API] DB cache hit for: ${normalizedPrompt.slice(0, 30)}...`);
-        return NextResponse.json({ image: cachedUrl, cached: true });
+      try {
+        const cachedUrl = await getCachedImageUrl(normalizedPrompt);
+        if (cachedUrl) {
+          console.log(`[Image API] DB cache hit for: ${normalizedPrompt.slice(0, 30)}...`);
+          return NextResponse.json({ image: cachedUrl, cached: true });
+        }
+      } catch (error) {
+        console.error(`[Image API] Error checking database cache:`, error);
+        // Continue to generate new image if cache check fails
       }
     }
 
@@ -119,17 +124,42 @@ export async function POST(request: NextRequest) {
         
         // Cache URL in database
         if (POSTGRES_URL) {
-          await cacheImageUrl(normalizedPrompt, blobUrl);
+          try {
+            await cacheImageUrl(normalizedPrompt, blobUrl);
+            console.log(`[Image API] Cached Blob URL in database`);
+          } catch (error) {
+            console.error(`[Image API] Failed to cache Blob URL in database:`, error);
+          }
         }
         
         console.log(`[Image API] Stored image in Vercel Blob: ${blobUrl}`);
       } else {
         // Fall back to base64 data URL
         imageUrl = `data:image/jpeg;base64,${base64Image}`;
+        
+        // Still cache base64 URL in database if Postgres is available
+        if (POSTGRES_URL) {
+          try {
+            await cacheImageUrl(normalizedPrompt, imageUrl);
+            console.log(`[Image API] Cached base64 URL in database (Blob upload failed)`);
+          } catch (error) {
+            console.error(`[Image API] Failed to cache base64 URL in database:`, error);
+          }
+        }
       }
     } else {
       // No Blob configured, use base64 data URL
       imageUrl = `data:image/jpeg;base64,${base64Image}`;
+      
+      // Cache base64 URL in database if Postgres is available
+      if (POSTGRES_URL) {
+        try {
+          await cacheImageUrl(normalizedPrompt, imageUrl);
+          console.log(`[Image API] Cached base64 URL in database (Blob not configured)`);
+        } catch (error) {
+          console.error(`[Image API] Failed to cache base64 URL in database:`, error);
+        }
+      }
     }
 
     // Cache in memory as fallback

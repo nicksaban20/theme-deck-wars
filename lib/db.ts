@@ -27,11 +27,12 @@ export async function initDatabase() {
     `;
 
     // Create card_images table
+    // Use TEXT instead of VARCHAR(512) to handle long base64 URLs
     await sql`
       CREATE TABLE IF NOT EXISTS card_images (
         id SERIAL PRIMARY KEY,
         prompt_key VARCHAR(255) UNIQUE NOT NULL,
-        r2_url VARCHAR(512) NOT NULL,
+        r2_url TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `;
@@ -52,10 +53,14 @@ export async function initDatabase() {
       )
     `;
 
-    console.log('[DB] Database tables initialized');
+    console.log('[DB] Database tables initialized successfully');
     return true;
   } catch (error) {
     console.error('[DB] Failed to initialize database:', error);
+    if (error instanceof Error) {
+      console.error('[DB] Error message:', error.message);
+      console.error('[DB] Error stack:', error.stack);
+    }
     return false;
   }
 }
@@ -110,10 +115,13 @@ export async function cacheThemeCards(theme: string, cards: Card[]): Promise<boo
         use_count = theme_cards.use_count + 1
     `;
     
-    console.log(`[DB] Cached cards for theme: "${theme}"`);
+    console.log(`[DB] Successfully cached cards for theme: "${theme}"`);
     return true;
   } catch (error) {
     console.error('[DB] Error caching theme cards:', error);
+    if (error instanceof Error) {
+      console.error('[DB] Error details:', error.message);
+    }
     return false;
   }
 }
@@ -159,10 +167,13 @@ export async function cacheImageUrl(prompt: string, r2Url: string): Promise<bool
       ON CONFLICT (prompt_key) DO UPDATE SET r2_url = ${r2Url}
     `;
     
-    console.log(`[DB] Cached image for prompt: "${prompt.slice(0, 30)}..."`);
+    console.log(`[DB] Successfully cached image for prompt: "${prompt.slice(0, 30)}..."`);
     return true;
   } catch (error) {
     console.error('[DB] Error caching image:', error);
+    if (error instanceof Error) {
+      console.error('[DB] Error details:', error.message);
+    }
     return false;
   }
 }

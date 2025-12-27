@@ -55,21 +55,26 @@ export async function POST(request: NextRequest) {
 
     // Check cache for existing cards for this theme
     if (POSTGRES_URL) {
-      const cachedCards = await getCachedThemeCards(theme);
-      if (cachedCards && cachedCards.length > 0) {
-        console.log(`[Cards] Using cached cards for theme: "${theme}"`);
-        
-        // Assign new IDs to cached cards for this player
-        const cardsWithIds = cachedCards.map((card, index) => ({
-          ...card,
-          id: `${playerId || 'card'}-${index}-${Date.now()}`,
-        }));
-        
-        if (partyHost && roomId && playerId) {
-          await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, cardCount > 5);
+      try {
+        const cachedCards = await getCachedThemeCards(theme);
+        if (cachedCards && cachedCards.length > 0) {
+          console.log(`[Cards] Using cached cards for theme: "${theme}"`);
+          
+          // Assign new IDs to cached cards for this player
+          const cardsWithIds = cachedCards.map((card, index) => ({
+            ...card,
+            id: `${playerId || 'card'}-${index}-${Date.now()}`,
+          }));
+          
+          if (partyHost && roomId && playerId) {
+            await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, cardCount > 5);
+          }
+          
+          return NextResponse.json({ cards: cardsWithIds, cached: true });
         }
-        
-        return NextResponse.json({ cards: cardsWithIds, cached: true });
+      } catch (error) {
+        console.error(`[Cards] Error checking database cache:`, error);
+        // Continue to generate new cards if cache check fails
       }
     }
 
@@ -180,11 +185,20 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
 
     // Cache the newly generated cards (without player-specific IDs)
     if (POSTGRES_URL) {
-      const cardsForCache = cards.map(card => ({
-        ...card,
-        id: '', // Remove player-specific ID for caching
-      }));
-      await cacheThemeCards(theme, cardsForCache);
+      try {
+        const cardsForCache = cards.map(card => ({
+          ...card,
+          id: '', // Remove player-specific ID for caching
+        }));
+        const cacheResult = await cacheThemeCards(theme, cardsForCache);
+        if (cacheResult) {
+          console.log(`[Cards] Successfully cached cards for theme: "${theme}"`);
+        } else {
+          console.error(`[Cards] Failed to cache cards for theme: "${theme}"`);
+        }
+      } catch (error) {
+        console.error(`[Cards] Error caching cards in database:`, error);
+      }
     }
 
     if (partyHost && roomId && playerId) {
