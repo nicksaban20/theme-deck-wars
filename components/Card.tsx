@@ -119,16 +119,19 @@ const iconNameMap: Record<string, string> = {
   horn: "horn-call",
 };
 
-// Inline SVG icons as fallback (guaranteed to work)
+// Inline SVG icons as fallback (guaranteed to work) - more detailed icons
 const fallbackIcons: Record<string, string> = {
-  sword: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.92 5L5 6.92l4.06 4.06L5 15.04 6.92 17l4.06-4.06 4.05 4.05 1.92-1.92-4.05-4.05 8.05-8.05L19.03 1.05 11 9.08 6.92 5z"/></svg>`,
-  shield: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>`,
-  skull: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 3.69 2.47 6.86 6 8.25V22h8v-1.75c3.53-1.39 6-4.56 6-8.25 0-5.52-4.48-10-10-10zm-2 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm4 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>`,
-  fire: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c-3.87 0-7-3.13-7-7 0-2.38 1.19-4.47 3-5.74V3c0-.55.45-1 1-1h6c.55 0 1 .45 1 1v7.26c1.81 1.27 3 3.36 3 5.74 0 3.87-3.13 7-7 7z"/></svg>`,
-  star: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
-  heart: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
-  crown: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`,
-  lightning: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`,
+  sword: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M507.31 72.57L439.43 4.69c-6.25-6.25-16.38-6.25-22.63 0l-22.63 22.63c-6.25 6.25-6.25 16.38 0 22.63l5.66 5.66L292.69 162.75l-34.34-34.34c-6.25-6.25-16.38-6.25-22.63 0l-11.31 11.31c-6.25 6.25-6.25 16.38 0 22.63l34.34 34.34-192 192c-6.25 6.25-6.25 16.38 0 22.63l22.63 22.63c6.25 6.25 16.38 6.25 22.63 0l192-192 34.34 34.34c6.25 6.25 16.38 6.25 22.63 0l11.31-11.31c6.25-6.25 6.25-16.38 0-22.63l-34.34-34.34L445.17 101.5l5.66 5.66c6.25 6.25 16.38 6.25 22.63 0l22.63-22.63c6.25-6.25 6.25-16.38 0-22.63l11.22-11.31z"/></svg>`,
+  shield: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M466.5 83.7l-192-80a48.15 48.15 0 00-36.9 0l-192 80C27.7 91.1 16 108.6 16 128c0 198.5 114.5 335.7 221.5 380.3 11.8 4.9 25.1 4.9 36.9 0C360.1 472.6 496 349.3 496 128c0-19.4-11.7-36.9-29.5-44.3z"/></svg>`,
+  skull: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M256 0C114.6 0 0 100.3 0 224c0 70.1 36.9 132.6 94.5 173.7 9.6 6.9 15.2 18.1 13.5 29.9l-9.4 66.2c-1.4 9.9 6 18.6 16.1 18.6H256h141.3c10.1 0 17.5-8.7 16.1-18.6l-9.4-66.2c-1.7-11.7 3.8-23 13.5-29.9C475.1 356.6 512 294.1 512 224 512 100.3 397.4 0 256 0zm-96 320c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48zm192 0c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48z"/></svg>`,
+  fire: `<svg viewBox="0 0 384 512" fill="currentColor"><path d="M216 23.86c0-23.8-30.65-32.77-44.15-13.04C48 191.85 224 200 224 288c0 35.63-29.11 64.46-64.85 63.99-35.17-.45-63.15-29.77-63.15-64.94v-85.51c0-21.7-26.47-32.23-41.43-16.5C27.8 213.16 0 261.33 0 320c0 105.87 86.13 192 192 192s192-86.13 192-192c0-170.29-168-193-168-296.14z"/></svg>`,
+  star: `<svg viewBox="0 0 576 512" fill="currentColor"><path d="M259.3 17.8L194 150.2 47.9 171.5c-26.2 3.8-36.7 36.1-17.7 54.6l105.7 103-25 145.5c-4.5 26.3 23.2 46 46.4 33.7L288 439.6l130.7 68.7c23.2 12.2 50.9-7.4 46.4-33.7l-25-145.5 105.7-103c19-18.5 8.5-50.8-17.7-54.6L382 150.2 316.7 17.8c-11.7-23.6-45.6-23.9-57.4 0z"/></svg>`,
+  heart: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>`,
+  crown: `<svg viewBox="0 0 640 512" fill="currentColor"><path d="M528 448H112c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h416c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm64-320c-26.5 0-48 21.5-48 48 0 7.1 1.6 13.7 4.4 19.8L476 239.2c-15.4 9.2-35.3 4-44.2-11.6L350.3 85C361 76.2 368 63 368 48c0-26.5-21.5-48-48-48s-48 21.5-48 48c0 15 7 28.2 17.7 37l-81.5 142.6c-8.9 15.6-28.9 20.8-44.2 11.6l-72.3-43.4c2.7-6 4.4-12.7 4.4-19.8 0-26.5-21.5-48-48-48S0 149.5 0 176s21.5 48 48 48c2.6 0 5.2-.4 7.7-.8L128 416h384l72.3-192.8c2.5.4 5.1.8 7.7.8 26.5 0 48-21.5 48-48s-21.5-48-48-48z"/></svg>`,
+  lightning: `<svg viewBox="0 0 320 512" fill="currentColor"><path d="M296 160H180.6l42.6-129.8C227.2 15 215.7 0 200 0H56C44 0 33.8 8.9 32.2 20.8l-32 240C-1.7 275.2 9.5 288 24 288h118.7L96.6 482.5c-3.6 15.2 8 29.5 23.3 29.5 8.4 0 16.4-4.4 20.8-12l176-304c9.3-15.9-2.2-36-20.7-36z"/></svg>`,
+  leaf: `<svg viewBox="0 0 576 512" fill="currentColor"><path d="M546.2 9.7c-5.6-12.5-21.6-13-28.3-1.2C486.9 62.4 431.4 96 368 96h-80C182 96 96 182 96 288c0 7 .8 13.7 1.5 20.5C161.3 262.8 253.4 224 384 224c8.8 0 16 7.2 16 16s-7.2 16-16 16C132.6 256 26 410.1 2.4 468c-6.6 16.3 1.2 34.9 17.5 41.6 16.4 6.8 35-1.1 41.8-17.3 1.5-3.6 20.9-47.9 71.9-90.6 32.4 43.9 94 85.8 174.9 77.2C465.5 467.5 576 326.7 576 154.3c0-50.2-10.8-102.2-29.8-144.6z"/></svg>`,
+  gem: `<svg viewBox="0 0 576 512" fill="currentColor"><path d="M485.5 0L576 160H0L90.5 0h395zm-129 192L288 448 19.9 192h336.6zm148.6 0L288 448 505.1 192h0z"/></svg>`,
+  potion: `<svg viewBox="0 0 448 512" fill="currentColor"><path d="M446.6 222.7c-1.8-8-6.8-15.4-12.5-22.1L336 89.3V32h-16V0H128v32h-16v57.3L13.8 200.6C8.1 207.3 3.2 214.7 1.4 222.7c-4.2 19.4 2.4 39.1 17.4 51.9L160 384v96c0 17.7 14.3 32 32 32h64c17.7 0 32-14.3 32-32v-96l141.2-109.4c15-12.8 21.6-32.5 17.4-51.9z"/></svg>`,
 };
 
 function getIconUrl(keyword: string, color: string = "ffffff"): string {
@@ -153,15 +156,11 @@ export function Card({
   const colors = colorClasses[card.color] || colorClasses.slate;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [iconLoaded, setIconLoaded] = useState(false);
-  const [iconError, setIconError] = useState(false);
 
   // Reset loading states when card or artStyle changes
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
-    setIconLoaded(false);
-    setIconError(false);
   }, [card.id, artStyle]);
 
   const artSizes = {
@@ -174,10 +173,14 @@ export function Card({
     const keyword = card.iconKeyword?.toLowerCase() || "sword";
     const svgContent = fallbackIcons[keyword] || fallbackIcons.sword;
     
+    const iconSize = size === "sm" ? "w-10 h-10" : size === "md" ? "w-14 h-14" : "w-18 h-18";
+    
     return (
       <div 
-        className="w-12 h-12 md:w-16 md:h-16 text-white/80"
-        style={{ filter: `drop-shadow(0 0 8px ${colors.hex})` }}
+        className={`${iconSize} text-white`}
+        style={{ 
+          filter: `drop-shadow(0 0 12px ${colors.hex}) drop-shadow(0 0 4px ${colors.hex})`,
+        }}
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
     );
@@ -237,35 +240,19 @@ export function Card({
       );
     }
 
-    // Icons mode - use Iconify CDN with inline SVG fallback
+    // Icons mode - use inline SVG icons (instant, no loading needed)
     if (artStyle === "icons") {
-      const iconUrl = getIconUrl(card.iconKeyword || "sword");
-
       return (
         <div 
           className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
-          style={{ backgroundColor: `${colors.hex}20` }}
+          style={{ backgroundColor: `${colors.hex}15` }}
         >
-          <div className="absolute inset-0 card-pattern-dots opacity-15" />
+          {/* Subtle pattern background */}
+          <div className="absolute inset-0 card-pattern-dots opacity-10" />
           
-          {/* Show fallback icon immediately, then swap to loaded one */}
-          <div 
-            className="relative z-10 flex items-center justify-center"
-            style={{ filter: `drop-shadow(0 0 10px ${colors.hex})` }}
-          >
-            {/* Fallback inline SVG - shows immediately */}
-            {!iconLoaded && !iconError && renderFallbackIcon()}
-            
-            {/* CDN icon - loads in background */}
-            <img
-              src={iconUrl}
-              alt={card.iconKeyword || "icon"}
-              className={`w-14 h-14 md:w-18 md:h-18 transition-opacity duration-300 ${
-                iconLoaded ? "opacity-100" : "absolute opacity-0"
-              }`}
-              onLoad={() => setIconLoaded(true)}
-              onError={() => setIconError(true)}
-            />
+          {/* Icon - renders instantly with inline SVG */}
+          <div className="relative z-10 flex items-center justify-center">
+            {renderFallbackIcon()}
           </div>
         </div>
       );
