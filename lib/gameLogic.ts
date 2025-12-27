@@ -1,4 +1,4 @@
-import { Card, GameState, Player, CardPerks, PassivePerk, TriggeredPerk, ComboPerk, StatusEffect } from './types';
+import { Card, GameState, Player, CardPerks, PassivePerk, TriggeredPerk, ComboPerk, StatusEffect, CardColor } from './types';
 
 export const STARTING_HP = 20;
 export const CARDS_PER_PLAYER = 5;

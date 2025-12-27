@@ -10,6 +10,7 @@ interface DraftPhaseProps {
   onSelectCard: (cardId: string) => void;
   onDiscardCard: (cardId: string) => void;
   onConfirmDraft: () => void;
+  blindDraft?: boolean;
 }
 
 export function DraftPhase({

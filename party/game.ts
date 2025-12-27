@@ -10,7 +10,6 @@ import {
 import {
   createInitialState,
   createPlayer,
-  calculateDamage,
   calculateDamageWithPerks,
   getLastPlayedCard,
   checkGameEnd,
@@ -32,6 +31,7 @@ import {
   getEffectiveManaCost,
   STARTING_HP,
   CARDS_PER_PLAYER,
+  DRAFT_POOL_SIZE,
   WINS_TO_WIN_MATCH,
 } from "../lib/gameLogic";
 
@@ -166,7 +166,8 @@ export default class GameServer implements Party.Server {
           this.handleAcceptRematch(sender);
           break;
         default:
-          console.warn(`[Game] Unknown message type: ${'type' in data ? data.type : 'unknown'}`);
+          const unknownData = data as { type?: string };
+          console.warn(`[Game] Unknown message type: ${unknownData.type || 'unknown'}`);
           this.sendError(sender, "Unknown message type");
           return;
       }

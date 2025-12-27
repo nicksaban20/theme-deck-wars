@@ -85,18 +85,6 @@ export default function GamePage() {
     }
   }, [gameState?.phase]);
 
-  // Trigger card generation when entering generating phase
-  useEffect(() => {
-    if (gameState?.phase === "generating" && !isGenerating && connectionId && !isSpectatorMode) {
-      // Small delay to ensure state is fully updated
-      const timeoutId = setTimeout(() => {
-        setIsGenerating(true);
-        generateCards();
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [gameState?.phase, isGenerating, connectionId, isSpectatorMode, generateCards]);
-
   const generateCards = useCallback(async () => {
     if (!gameState || !connectionId) {
       console.log('[generateCards] Missing gameState or connectionId', { gameState: !!gameState, connectionId });
@@ -274,6 +262,7 @@ export default function GamePage() {
           onSelectCard={draftSelect}
           onDiscardCard={draftDiscard}
           onConfirmDraft={draftConfirm}
+          blindDraft={gameState.blindDraft || false}
         />
       );
 
