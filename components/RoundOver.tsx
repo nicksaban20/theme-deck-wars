@@ -44,7 +44,7 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
   }, [countdown, isFirstPlayer, onContinue]);
 
   return (
-    <div className="min-h-screen arena-bg flex flex-col items-center justify-center p-8">
+    <div className="h-full arena-bg flex flex-col items-center justify-center p-8">
       {/* Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {isWinner && (

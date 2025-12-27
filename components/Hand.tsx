@@ -51,11 +51,18 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
         <div className="flex items-end" style={{ gap: `-${overlap}px` }}>
           {cards.map((card, index) => {
             // Subtle fan effect - less rotation for readability
-            const rotation = cards.length > 1 
-              ? (index - (cards.length - 1) / 2) * 3 
+            const rotation = cards.length > 1
+              ? (index - (cards.length - 1) / 2) * 3
               : 0;
             const yOffset = Math.abs(index - (cards.length - 1) / 2) * 5;
-            
+
+            const canPlay = player && gameState ? canPlayCard(player, card, gameState) : true;
+            const disableReason = !isCurrentTurn
+              ? "Not your turn"
+              : !canPlay
+                ? `Not enough Mana (Cost: ${getEffectiveManaCost(card, gameState)})`
+                : "";
+
             return (
               <div
                 key={card.id}
@@ -64,6 +71,7 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
                   transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
                   zIndex: index,
                 }}
+                title={disableReason}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.zIndex = '50';
                 }}
@@ -74,8 +82,8 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
                 <CardWithArt
                   card={card}
                   onClick={onPlayCard ? () => onPlayCard(card.id) : undefined}
-                  isPlayable={isCurrentTurn && !disabled && (player && gameState ? canPlayCard(player, card, gameState) : true)}
-                  disabled={disabled || !isCurrentTurn || (player && gameState ? !canPlayCard(player, card, gameState) : false)}
+                  isPlayable={isCurrentTurn && !disabled && canPlay}
+                  disabled={disabled || !isCurrentTurn || !canPlay}
                   size="md"
                   showAbility={true}
                 />

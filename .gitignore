@@ -38,6 +38,13 @@ next-env.d.ts
 # Vercel
 .vercel
 
+
 # PartyKit
 .partykit/
+
+# Large Models
+*.gguf
+*.wasm
+*.wasm.*
+
 

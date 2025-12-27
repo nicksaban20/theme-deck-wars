@@ -47,7 +47,7 @@ export function GameOver({
     .map(pc => pc.card);
 
   return (
-    <div className="min-h-screen arena-bg flex flex-col items-center justify-center p-4 md:p-8">
+    <div className="h-full arena-bg flex flex-col items-center justify-center p-4 md:p-8">
       {/* Victory/Defeat effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {isWinner && !isSpectator && (

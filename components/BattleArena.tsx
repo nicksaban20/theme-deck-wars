@@ -41,12 +41,12 @@ export function BattleArena({
 
   const opponentLastPlayedCard = opponent
     ? gameState.playedCards
-        .filter((pc) => pc.playerId === opponent.id && pc.gameNumber === gameState.gameNumber)
-        .sort((a, b) => b.round - a.round)[0]?.card
+      .filter((pc) => pc.playerId === opponent.id && pc.gameNumber === gameState.gameNumber)
+      .sort((a, b) => b.round - a.round)[0]?.card
     : null;
 
   return (
-    <div className="min-h-screen arena-bg flex flex-col p-4 md:p-8">
+    <div className="h-full w-full overflow-hidden arena-bg flex flex-col p-4 md:p-8">
       {/* Decorative background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-violet-500/5 rounded-full blur-3xl" />
@@ -54,7 +54,7 @@ export function BattleArena({
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full">
+      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full min-h-0">
         {/* Header with match info */}
         <div className="text-center mb-4">
           {/* Match Score */}
@@ -66,21 +66,21 @@ export function BattleArena({
               </span>
               <span className="text-sm text-gray-400">Best of 3</span>
             </div>
-            
+
             {spectatorCount > 0 && (
               <div className="flex items-center gap-1 px-3 py-1 bg-violet-500/10 rounded-lg border border-violet-500/20 text-violet-400 text-sm">
                 👁️ {spectatorCount}
               </div>
             )}
-            
+
             {isSpectator && (
               <div className="px-3 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20 text-amber-400 text-sm">
                 Spectating
               </div>
             )}
           </div>
-          
-          <h1 
+
+          <h1
             className="text-2xl md:text-3xl font-bold text-white mb-1"
             style={{ fontFamily: "var(--font-display)" }}
           >
@@ -125,15 +125,15 @@ export function BattleArena({
                   lastDamage={lastCardPlayed?.playerId === currentPlayerId ? lastCardPlayed.damage : null}
                 />
                 <div className="mt-2 flex items-center justify-center gap-3">
-                  <ManaDisplay 
-                    current={opponent.mana ?? 3} 
-                    max={opponent.maxMana ?? 5} 
-                    size="sm" 
+                  <ManaDisplay
+                    current={opponent.mana ?? 3}
+                    max={opponent.maxMana ?? 5}
+                    size="sm"
                   />
                   {opponent.statusEffects && opponent.statusEffects.length > 0 && (
                     <div className="flex gap-1">
                       {opponent.statusEffects.map((effect, i) => (
-                        <span 
+                        <span
                           key={i}
                           className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
                           title={`${effect.type}: ${effect.value}`}
@@ -179,7 +179,7 @@ export function BattleArena({
           <div className="relative w-full max-w-2xl">
             {/* Battle zone background */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/5 to-transparent rounded-3xl" />
-            
+
             <div className="relative grid grid-cols-2 gap-8 p-8">
               {/* Opponent's last played card */}
               <div className="flex flex-col items-center">
@@ -269,15 +269,15 @@ export function BattleArena({
                     lastDamage={lastCardPlayed?.playerId !== currentPlayerId ? lastCardPlayed?.damage : null}
                   />
                   <div className="mt-2 flex items-center justify-center gap-3">
-                    <ManaDisplay 
-                      current={currentPlayer.mana ?? 3} 
-                      max={currentPlayer.maxMana ?? 5} 
-                      size="md" 
+                    <ManaDisplay
+                      current={currentPlayer.mana ?? 3}
+                      max={currentPlayer.maxMana ?? 5}
+                      size="md"
                     />
                     {currentPlayer.statusEffects && currentPlayer.statusEffects.length > 0 && (
                       <div className="flex gap-1">
                         {currentPlayer.statusEffects.map((effect, i) => (
-                          <span 
+                          <span
                             key={i}
                             className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
                             title={`${effect.type}: ${effect.value} (${effect.duration ?? 1} rounds)`}
@@ -298,16 +298,16 @@ export function BattleArena({
 
             {/* Player's Hand */}
             <div className="bg-gradient-to-t from-black/30 to-transparent rounded-t-3xl pt-6 pb-4 px-4">
-                {currentPlayer && (
-                  <Hand
-                    cards={currentPlayer.cards}
-                    onPlayCard={onPlayCard}
-                    isCurrentTurn={isMyTurn}
-                    disabled={gameState.phase !== "battle"}
-                    player={currentPlayer}
-                    gameState={gameState}
-                  />
-                )}
+              {currentPlayer && (
+                <Hand
+                  cards={currentPlayer.cards}
+                  onPlayCard={onPlayCard}
+                  isCurrentTurn={isMyTurn}
+                  disabled={gameState.phase !== "battle"}
+                  player={currentPlayer}
+                  gameState={gameState}
+                />
+              )}
             </div>
           </div>
         )}

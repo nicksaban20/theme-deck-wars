@@ -197,7 +197,7 @@ export default function GamePage() {
   // Loading state
   if (!connected) {
     return (
-      <div className="min-h-screen arena-bg flex items-center justify-center">
+      <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Connecting to game server...</p>
@@ -209,7 +209,7 @@ export default function GamePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen arena-bg flex items-center justify-center p-8">
+      <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center p-8">
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 max-w-md text-center">
           <p className="text-red-400 text-lg">{error}</p>
         </div>
@@ -220,7 +220,7 @@ export default function GamePage() {
   // Waiting for game state
   if (!gameState) {
     return (
-      <div className="min-h-screen arena-bg flex items-center justify-center">
+      <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Loading game...</p>
@@ -350,7 +350,7 @@ export default function GamePage() {
       case "match-ended":
         if (!connectionId) {
           return (
-            <div className="min-h-screen arena-bg flex items-center justify-center">
+            <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center">
               <p className="text-gray-400">Loading results...</p>
             </div>
           );
@@ -369,7 +369,7 @@ export default function GamePage() {
 
       default:
         return (
-          <div className="min-h-screen arena-bg flex items-center justify-center">
+          <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center">
             <p className="text-gray-400">Unknown game state</p>
           </div>
         );

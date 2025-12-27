@@ -20,7 +20,7 @@ export function RevealPhase({
   const opponentReady = opponent?.isRevealReady || false;
 
   return (
-    <div className="min-h-screen arena-bg flex flex-col items-center justify-center p-4 md:p-8">
+    <div className="h-full arena-bg flex flex-col items-center justify-center p-4 md:p-8">
       <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-8">

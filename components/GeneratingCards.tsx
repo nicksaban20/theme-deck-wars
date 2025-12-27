@@ -26,7 +26,7 @@ export function GeneratingCards({ themes }: GeneratingCardsProps) {
   }, []);
 
   return (
-    <div className="min-h-screen arena-bg flex flex-col items-center justify-center p-8">
+    <div className="h-full arena-bg flex flex-col items-center justify-center p-8">
       {/* Decorative elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl animate-pulse" />

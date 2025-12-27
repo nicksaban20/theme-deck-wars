@@ -67,6 +67,18 @@ const sizeClasses = {
   lg: "w-56 h-76",
 };
 
+const rarityColors = {
+  common: "text-gray-300",
+  rare: "text-blue-300",
+  epic: "text-purple-300",
+};
+
+const rarityIcons = {
+  common: "⚪",
+  rare: "🔵",
+  epic: "🟣",
+};
+
 // Inline SVG icons as fallback (guaranteed to work)
 const fallbackIcons: Record<string, string> = {
   sword: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M507.31 72.57L439.43 4.69c-6.25-6.25-16.38-6.25-22.63 0l-22.63 22.63c-6.25 6.25-6.25 16.38 0 22.63l5.66 5.66L292.69 162.75l-34.34-34.34c-6.25-6.25-16.38-6.25-22.63 0l-11.31 11.31c-6.25 6.25-6.25 16.38 0 22.63l34.34 34.34-192 192c-6.25 6.25-6.25 16.38 0 22.63l22.63 22.63c6.25 6.25 16.38 6.25 22.63 0l192-192 34.34 34.34c6.25 6.25 16.38 6.25 22.63 0l11.31-11.31c6.25-6.25 6.25-16.38 0-22.63l-34.34-34.34L445.17 101.5l5.66 5.66c6.25 6.25 16.38 6.25 22.63 0l22.63-22.63c6.25-6.25 6.25-16.38 0-22.63l11.22-11.31z"/></svg>`,
@@ -98,21 +110,9 @@ export function Card({
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const rarityColors = useMemo(() => ({
-    common: "text-gray-300",
-    rare: "text-blue-300",
-    epic: "text-purple-300",
-  }), []);
-
-  const rarityIcons = useMemo(() => ({
-    common: "⚪",
-    rare: "🔵",
-    epic: "🟣",
-  }), []);
-
   // Fetch AI image when in AI mode (cloud or local)
   useEffect(() => {
-    // Use pre-generated imageUrl if available
+    // Use pre-generated imageUrl if available - INSTANT LOAD
     if (card.imageUrl) {
       setImageUrl(card.imageUrl);
       setIsLoading(false);
@@ -126,6 +126,10 @@ export function Card({
       return;
     }
 
+    // Only fetch if we don't have an image URL
+    setIsLoading(true);
+    setHasError(false);
+
     // Create a delay based on card ID to stagger requests
     const hash = card.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
     const delay = (hash % 5) * 400; // 0-1600ms stagger
@@ -137,43 +141,33 @@ export function Card({
     return () => clearTimeout(timeoutId);
 
     async function fetchImage() {
-      setIsLoading(true);
-      setHasError(false);
-
       try {
-        const prompt = card.imagePrompt || `${card.name}, fantasy trading card art`;
-
-        // Add timeout to prevent hanging requests
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, cardId: card.id, artStyle }),
-          signal: controller.signal,
+          body: JSON.stringify({
+            prompt: card.imagePrompt,
+            cardId: card.id,
+            artStyle,
+          }),
         });
 
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status}: Failed to generate image`);
-        }
+        if (!response.ok) throw new Error("Failed to generate image");
 
         const data = await response.json();
-        if (data.image) {
-          setImageUrl(data.image);
+        if (data.imageUrl) {
+          setImageUrl(data.imageUrl);
         } else {
-          throw new Error("No image in response");
+          setHasError(true);
         }
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.warn(`[Card] Image request timeout for ${card.name}`);
+        console.error("Error fetching image:", error);
+        // Fallback to local heuristic if available? No, just error state
+        if (card.imageUrl) {
+          setImageUrl(card.imageUrl);
         } else {
-          console.error(`[Card] Error fetching AI image for ${card.name}:`, error);
+          setHasError(true);
         }
-        setHasError(true);
       } finally {
         setIsLoading(false);
       }
@@ -188,93 +182,53 @@ export function Card({
 
     return (
       <div
-        className={`${iconSize} text-white`}
-        style={{
-          filter: `drop-shadow(0 0 12px ${colors.hex}) drop-shadow(0 0 4px ${colors.hex})`,
-        }}
+        className={`${iconSize} ${colors.accent}`}
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
     );
   };
 
   const renderArtArea = () => {
-    // Pattern mode (default) - always works, no loading needed
-    if (artStyle === "pattern") {
+    // AI Art mode or Pre-generated Image
+    if (artStyle === "ai" || artStyle === "local-ai" || (imageUrl && artStyle !== "icons")) {
       return (
-        <div className="flex-1 bg-black/20 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
-          <div className="absolute inset-0 card-pattern-grid opacity-50" />
-          <div className="absolute text-4xl opacity-30">
-            {getCardEmoji(card.color)}
-          </div>
-        </div>
-      );
-    }
-
-    // AI Art mode (Cloud or Local)
-    if (artStyle === "ai" || artStyle === "local-ai") {
-      // Error fallback - show icon
-      if (hasError) {
-        return (
-          <div
-            className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
-            style={{ backgroundColor: `${colors.hex}15` }}
-          >
-            <div className="absolute inset-0 card-pattern-grid opacity-20" />
-            <div className="relative z-10 flex flex-col items-center justify-center">
+        <div className="flex-1 bg-black/40 rounded-lg mb-2 overflow-hidden relative group min-h-0">
+          {isLoading ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className={`w-8 h-8 border-4 border-t-transparent ${colors.accent.replace('text-', 'border-')} rounded-full animate-spin mb-2`} />
+              <span className="text-[10px] text-white/70">Dreaming...</span>
+            </div>
+          ) : hasError || !imageUrl ? (
+            <div className="absolute inset-0 flex items-center justify-center opacity-50">
               {renderFallbackIcon()}
-              <span className="text-[8px] text-white/40 mt-1">Art unavailable</span>
             </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="flex-1 bg-black/30 rounded-lg mb-2 overflow-hidden relative">
-          {/* Pattern background while loading */}
-          <div className="absolute inset-0 card-pattern-grid opacity-30" />
-
-          {/* Loading state */}
-          {isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
-              <span className="text-[9px] text-white/50">
-                {artStyle === "local-ai" ? "Local AI..." : "Generating..."}
-              </span>
-            </div>
-          )}
-
-          {/* The actual image - works with both base64 and R2 URLs */}
-          {imageUrl && (
+          ) : (
             <img
               src={imageUrl}
               alt={card.name}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-110"
               onError={() => setHasError(true)}
             />
           )}
+
+          {/* subtle gradient overlay at bottom for text readability if needed */}
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         </div>
       );
     }
 
-    // Icons mode - use inline SVG icons (instant, no loading needed)
-    if (artStyle === "icons") {
-      return (
-        <div
-          className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
-          style={{ backgroundColor: `${colors.hex}15` }}
-        >
-          {/* Subtle pattern background */}
-          <div className="absolute inset-0 card-pattern-dots opacity-10" />
-
-          {/* Icon - renders instantly with inline SVG */}
-          <div className="relative z-10 flex items-center justify-center">
-            {renderFallbackIcon()}
-          </div>
+    // Icons mode
+    return (
+      <div
+        className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative min-h-0"
+        style={{ backgroundColor: `${colors.hex}15` }}
+      >
+        <div className="absolute inset-0 card-pattern-dots opacity-10" />
+        <div className="relative z-10 flex items-center justify-center transform transition-transform duration-300 hover:scale-110">
+          {renderFallbackIcon()}
         </div>
-      );
-    }
-
-    return null;
+      </div>
+    );
   };
 
   return (
@@ -283,157 +237,90 @@ export function Card({
       className={`
         relative ${sizeClasses[size]} rounded-xl overflow-hidden
         bg-gradient-to-br ${colors.gradient}
-        transition-all duration-300 ease-out
+        transition-all duration-300 ease-out shadow-lg
         ${!disabled && onClick ? "cursor-pointer" : ""}
-        ${!disabled && isPlayable ? `hover:scale-105 hover:-translate-y-2 hover:shadow-xl hover:${colors.glow}` : ""}
-        ${disabled ? "opacity-60 grayscale" : ""}
-        ${isPlayable ? `ring-2 ring-white/30 animate-pulse` : ""}
+        ${!disabled && isPlayable ? `hover:scale-105 hover:-translate-y-2 hover:shadow-2xl hover:${colors.glow} z-10` : "z-0"}
+        ${disabled ? "opacity-75 saturate-50 cursor-not-allowed" : ""}
+        ${isPlayable ? `ring-2 ring-white/40` : "border border-white/10"}
+        flex flex-col
       `}
     >
-      {/* Card border frame */}
-      <div className="absolute inset-0 border border-white/10 rounded-xl pointer-events-none" />
+      {/* Glossy shine effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20 pointer-events-none" />
 
       {/* Card content */}
-      <div className="relative h-full flex flex-col p-3">
-        {/* Header - Name, Mana Cost, Rarity */}
-        <div className="bg-black/40 rounded-lg px-2 py-1 mb-2 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-1">
-            <ManaCostBadge
-              cost={cardWithDefaults.manaCost}
-              available={999}
-              size={size === "sm" ? "sm" : "md"}
-            />
-            <h3
-              className="font-bold text-white text-center truncate flex-1"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: size === "sm" ? "0.7rem" : size === "md" ? "0.85rem" : "1rem"
-              }}
-            >
-              {card.name}
-            </h3>
-            <div className={`${rarityColors[cardWithDefaults.rarity]} text-xs`} title={`${cardWithDefaults.rarity} card`}>
-              {rarityIcons[cardWithDefaults.rarity]}
-            </div>
-          </div>
-          {cardWithDefaults.perks && Object.keys(cardWithDefaults.perks).length > 0 && (
-            <div className="mt-1 flex justify-center">
-              <PerkBadge perks={cardWithDefaults.perks} size={size === "sm" ? "sm" : "md"} />
-            </div>
-          )}
+      <div className="relative h-full flex flex-col p-2.5 z-10">
+
+        {/* Header: Mana & Name */}
+        <div className="flex items-center justify-between gap-1.5 mb-2 relative">
+          <ManaCostBadge
+            cost={cardWithDefaults.manaCost}
+            available={999}
+            size={size === "sm" ? "sm" : "md"}
+          />
+          <h3
+            className="font-bold text-white text-right leading-tight truncate flex-1 drop-shadow-md"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: size === "sm" ? "0.7rem" : size === "md" ? "0.85rem" : "0.95rem"
+            }}
+          >
+            {card.name}
+          </h3>
         </div>
 
-        {/* Art area */}
+        {/* Main Art Area */}
         {renderArtArea()}
 
-        {/* Stats Row 1: Attack, Defense, Speed */}
-        <div className="flex justify-between items-center mb-1 gap-1">
-          <div className="flex items-center gap-1 bg-red-900/70 px-2 py-1 rounded-lg backdrop-blur-sm flex-1">
-            <span className="text-red-300 text-xs">⚔️</span>
-            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.75rem" : "0.9rem" }}>
-              {cardWithDefaults.attack}
-            </span>
+        {/* Stats Bar - Compact & Clean */}
+        <div className="bg-black/40 backdrop-blur-md rounded-lg p-1.5 flex justify-between items-center mb-1.5 border border-white/5">
+          <div className="flex flex-col items-center flex-1 border-r border-white/10">
+            <span className="text-[10px] text-red-300 uppercase font-bold tracking-wider">ATK</span>
+            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.attack}</span>
           </div>
-          <div className="flex items-center gap-1 bg-blue-900/70 px-2 py-1 rounded-lg backdrop-blur-sm flex-1">
-            <span className="text-blue-300 text-xs">🛡️</span>
-            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.75rem" : "0.9rem" }}>
-              {cardWithDefaults.defense}
-            </span>
+          <div className="flex flex-col items-center flex-1 border-r border-white/10">
+            <span className="text-[10px] text-blue-300 uppercase font-bold tracking-wider">DEF</span>
+            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.defense}</span>
           </div>
-          <div className="flex items-center gap-1 bg-purple-900/70 px-2 py-1 rounded-lg backdrop-blur-sm" title={`Speed: ${cardWithDefaults.speed}`}>
-            <span className="text-purple-300 text-xs">⚡</span>
-            <span className="font-bold text-white" style={{ fontSize: size === "sm" ? "0.7rem" : "0.8rem" }}>
-              {cardWithDefaults.speed}
-            </span>
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-[10px] text-purple-300 uppercase font-bold tracking-wider">SPD</span>
+            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.speed}</span>
           </div>
         </div>
 
-        {/* Stats Row 2: Health (if present) */}
-        {cardWithDefaults.health !== undefined && cardWithDefaults.health > 0 && (
-          <div className="flex justify-center items-center mb-1">
-            <div className="flex items-center gap-1 bg-green-900/70 px-2 py-0.5 rounded-lg backdrop-blur-sm">
-              <span className="text-green-300 text-xs">❤️</span>
-              <span className="font-bold text-white text-xs">
-                {cardWithDefaults.health} HP
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Perks/Abilities - Show structured perks if available, otherwise fallback to ability text */}
+        {/* Abilities / Perks - Simplified */}
         {showAbility && size !== "sm" && (
-          <div className="bg-black/50 rounded-lg px-2 py-1 backdrop-blur-sm">
+          <div className="bg-black/20 rounded-lg p-1.5 min-h-[3.5em] flex items-center justify-center">
             {cardWithDefaults.perks && Object.keys(cardWithDefaults.perks).length > 0 ? (
-              <div className="space-y-0.5">
-                {/* Passive Perks */}
-                {cardWithDefaults.perks.passive && cardWithDefaults.perks.passive.length > 0 && (
-                  <div className="text-center">
-                    {cardWithDefaults.perks.passive.map((perk, i) => (
-                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
-                        {perk.type === 'damageReduction' && `🛡️ -${perk.value} damage taken`}
-                        {perk.type === 'damageBoost' && `⚔️ +${perk.value} attack`}
-                        {perk.type === 'healPerTurn' && `💚 +${perk.value} HP/turn`}
-                        {perk.type === 'drawCard' && `📖 Draw card`}
-                      </p>
-                    ))}
-                  </div>
-                )}
-                {/* Triggered Perks */}
-                {cardWithDefaults.perks.triggered && cardWithDefaults.perks.triggered.length > 0 && (
-                  <div className="text-center">
-                    {cardWithDefaults.perks.triggered.map((perk, i) => (
-                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
-                        ✨ {perk.effect}
-                      </p>
-                    ))}
-                  </div>
-                )}
-                {/* Combo Perks */}
-                {cardWithDefaults.perks.combo && cardWithDefaults.perks.combo.length > 0 && (
-                  <div className="text-center">
-                    {cardWithDefaults.perks.combo.map((perk, i) => (
-                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
-                        🔗 {perk.comboEffect}
-                      </p>
-                    ))}
-                  </div>
-                )}
-                {/* Status Effects */}
-                {cardWithDefaults.perks.status && cardWithDefaults.perks.status.length > 0 && (
-                  <div className="text-center">
-                    {cardWithDefaults.perks.status.map((effect, i) => (
-                      <p key={i} className={`${colors.accent} text-xs leading-tight`}>
-                        {effect.type}: {effect.value} {effect.duration ? `(${effect.duration} turns)` : ''}
-                      </p>
-                    ))}
-                  </div>
+              <div className="text-center">
+                {/* Prioritize showing just the most important perk icon/text */}
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {cardWithDefaults.perks.passive?.map((p, i) => (
+                    <span key={`p-${i}`} className="text-[10px] bg-slate-700/50 px-1.5 py-0.5 rounded text-slate-200 border border-slate-600/30">
+                      {p.type === 'damageBoost' ? `+${p.value} ATK` : p.type === 'damageReduction' ? `-${p.value} DMG` : 'Passive'}
+                    </span>
+                  ))}
+                  {cardWithDefaults.perks.triggered?.map((p, i) => (
+                    <span key={`t-${i}`} className="text-[10px] bg-amber-700/50 px-1.5 py-0.5 rounded text-amber-200 border border-amber-600/30">
+                      {!p.effect.includes(" ") ? p.effect : "Effect"}
+                    </span>
+                  ))}
+                </div>
+                {/* Fallback to simple description if not specific */}
+                {(!cardWithDefaults.perks.passive?.length && !cardWithDefaults.perks.triggered?.length) && (
+                  <p className="text-[10px] text-white/80 leading-tight line-clamp-2">
+                    {cardWithDefaults.ability || "No ability"}
+                  </p>
                 )}
               </div>
-            ) : cardWithDefaults.ability ? (
-              <p
-                className={`${colors.accent} text-center leading-tight`}
-                style={{ fontSize: size === "md" ? "0.6rem" : "0.7rem" }}
-              >
+            ) : (
+              <p className="text-[10px] text-white/80 text-center leading-tight line-clamp-2">
                 {cardWithDefaults.ability}
               </p>
-            ) : null}
-          </div>
-        )}
-
-        {/* Flavor text - only on large cards */}
-        {size === "lg" && (
-          <div className="mt-1">
-            <p className="text-white/60 italic text-center text-xs">
-              &quot;{card.flavorText}&quot;
-            </p>
+            )}
           </div>
         )}
       </div>
-
-      {/* Playable indicator */}
-      {isPlayable && !disabled && (
-        <div className="absolute inset-0 border-2 border-white/50 rounded-xl pointer-events-none" />
-      )}
     </div>
   );
 }
