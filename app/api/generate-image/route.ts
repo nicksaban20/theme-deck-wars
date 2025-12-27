@@ -256,6 +256,14 @@ export async function POST(request: NextRequest) {
       imageSource = "cloudflare";
     }
 
+    if (!base64Image) {
+      console.warn(`[Image API] Failed to generate image (Source: ${imageSource})`);
+      return NextResponse.json(
+        { error: "Failed to generate image" },
+        { status: 500 }
+      );
+    }
+
     console.log(`[Image API] Successfully generated image via ${imageSource}`);
 
     // Try to upload to Vercel Blob for persistent storage
