@@ -376,11 +376,10 @@ export default function GamePage() {
     }
   };
 
-  return (
+  <div className="h-screen w-screen overflow-hidden arena-bg relative flex flex-col">
     <ErrorBoundary>
-      <div className="h-screen w-screen overflow-hidden arena-bg relative flex flex-col">
-        {renderGameContent()}
-      </div>
+      {renderGameContent()}
     </ErrorBoundary>
+  </div>
   );
 }
