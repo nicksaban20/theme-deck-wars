@@ -190,7 +190,8 @@ export function Card({
 
   const renderArtArea = () => {
     // AI Art mode or Pre-generated Image
-    if (artStyle === "ai" || artStyle === "local-ai" || (imageUrl && artStyle !== "icons")) {
+    // Always show image if we have a URL, regardless of art style preference (unless strictly minimal)
+    if (imageUrl || artStyle === "ai" || artStyle === "local-ai") {
       return (
         <div className="flex-1 bg-black/40 rounded-lg mb-2 overflow-hidden relative group min-h-0">
           {isLoading ? (

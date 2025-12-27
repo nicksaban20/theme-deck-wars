@@ -112,192 +112,159 @@ export function BattleArena({
         )}
 
         {/* Opponent Area */}
-        <div className="mb-6">
+        {/* Opponent Area - CENTERED */}
+        <div className="mb-2 flex flex-col items-center">
           {opponent && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-              {/* Opponent HP */}
-              <div className="md:col-span-1">
-                <HealthBar
-                  hp={opponent.hp}
-                  playerName={opponent.name}
-                  isCurrentTurn={gameState.currentTurn === opponent.id}
-                  isOpponent={true}
-                  lastDamage={lastCardPlayed?.playerId === currentPlayerId ? lastCardPlayed.damage : null}
-                />
-                <div className="mt-2 flex items-center justify-center gap-3">
-                  <ManaDisplay
-                    current={opponent.mana ?? 3}
-                    max={opponent.maxMana ?? 5}
-                    size="sm"
-                  />
-                  {opponent.statusEffects && opponent.statusEffects.length > 0 && (
-                    <div className="flex gap-1">
-                      {opponent.statusEffects.map((effect, i) => (
-                        <span
-                          key={i}
-                          className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
-                          title={`${effect.type}: ${effect.value}`}
-                        >
-                          {effect.type[0].toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 text-center text-sm text-gray-400">
-                  Theme: <span className="text-amber-400">&quot;{opponent.theme}&quot;</span>
-                  <span className="ml-2 text-violet-400">({opponent.matchWins} wins)</span>
-                </div>
-              </div>
-
-              {/* Opponent cards remaining */}
-              <div className="md:col-span-2 flex justify-center">
-                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <p className="text-sm text-gray-400 text-center mb-2">
-                    Opponent&apos;s Hand
-                  </p>
-                  <div className="flex gap-2 justify-center">
+            <div className="w-full max-w-4xl flex flex-col items-center">
+              {/* Opponent Hand (Top) */}
+              <div className="mb-2">
+                <div className="bg-white/5 rounded-xl px-4 py-2 border border-white/10 inline-flex items-center gap-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Opponent</span>
+                  <div className="flex gap-1">
                     {opponent.cards.map((_, i) => (
                       <div
                         key={i}
-                        className="w-8 h-12 bg-gradient-to-br from-rose-600 to-red-800 rounded-lg 
-                                   shadow-lg card-pattern-lines"
+                        className="w-6 h-8 bg-gradient-to-br from-rose-600 to-red-800 rounded shadow-sm border border-white/10"
                       />
                     ))}
                     {opponent.cards.length === 0 && (
-                      <span className="text-gray-500">No cards left</span>
+                      <span className="text-gray-500 text-xs">Empty Hand</span>
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Opponent Stats (Health + Mana) */}
+              <div className="flex items-center justify-center gap-4 w-full md:w-2/3 lg:w-1/2">
+                <div className="flex-1">
+                  <HealthBar
+                    hp={opponent.hp}
+                    playerName={opponent.name}
+                    isCurrentTurn={gameState.currentTurn === opponent.id}
+                    isOpponent={true}
+                    lastDamage={lastCardPlayed?.playerId === currentPlayerId ? lastCardPlayed.damage : null}
+                  />
+                </div>
+                <ManaDisplay
+                  current={opponent.mana ?? 3}
+                  max={opponent.maxMana ?? 5}
+                  size="sm"
+                />
+              </div>
+
+              {/* Opponent Status Effects & Info */}
+              <div className="mt-1 flex gap-2 text-xs text-gray-400">
+                <span>Theme: <span className="text-amber-400">{opponent.theme}</span></span>
+                {opponent.statusEffects && opponent.statusEffects.length > 0 && (
+                  <div className="flex gap-1 ml-2">
+                    {opponent.statusEffects.map((effect, i) => (
+                      <span key={i} className="px-1 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30">
+                        {effect.type[0].toUpperCase()}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Battle Zone */}
-        <div className="flex-1 flex items-center justify-center my-4">
-          <div className="relative w-full max-w-2xl">
-            {/* Battle zone background */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/5 to-transparent rounded-3xl" />
+        {/* Battle Zone - CENTERED */}
+        <div className="flex-1 flex items-center justify-center my-2 min-h-0 relative">
 
-            <div className="relative grid grid-cols-2 gap-8 p-8">
-              {/* Opponent's last played card */}
-              <div className="flex flex-col items-center">
-                <span className="text-sm text-gray-400 mb-2">
-                  {opponent?.name}&apos;s Card
-                </span>
+          {/* Battle Log - Floating Left or Integrated */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-48 hidden md:block">
+            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/5 max-h-40 overflow-y-auto">
+              <p className="text-[10px] text-gray-500 uppercase mb-1 font-bold">Battle Log</p>
+              <div className="space-y-1">
+                {gameState.playedCards
+                  .filter(pc => pc.gameNumber === gameState.gameNumber)
+                  .slice(-3)
+                  .reverse()
+                  .map((pc, i) => (
+                    <div key={i} className="text-xs flex items-center gap-1">
+                      <span className={pc.playerId === currentPlayerId ? "text-violet-400" : "text-rose-400"}>
+                        {gameState.players[pc.playerId]?.name}
+                      </span>
+                      <span className="text-gray-600 border border-gray-700 px-1 rounded text-[10px]">{pc.card.name}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative w-full max-w-xl">
+            {/* Battle zone background */}
+            <div className="absolute inset-x-0 top-10 bottom-10 bg-gradient-to-b from-violet-500/5 to-cyan-500/5 rounded-full blur-3xl" />
+
+            <div className="relative grid grid-cols-2 gap-12 md:gap-20 p-4 justify-items-center items-center">
+              {/* Opponent's Card Slot */}
+              <div className="flex flex-col items-center transition-all duration-500">
                 {opponentLastPlayedCard ? (
-                  <div className={lastCardPlayed?.playerId !== currentPlayerId ? "animate-slide-up" : ""}>
+                  <div className={`${lastCardPlayed?.playerId !== currentPlayerId ? "animate-slide-up" : ""} scale-90 md:scale-100`}>
                     <CardWithArt card={opponentLastPlayedCard} size="md" />
                   </div>
                 ) : (
-                  <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/20 
-                                  flex items-center justify-center text-gray-500">
-                    Waiting...
+                  <div className="w-32 h-44 md:w-40 md:h-56 rounded-xl border-2 border-dashed border-white/10 
+                                  flex items-center justify-center text-gray-600 bg-white/5">
+                    <span className="text-xs">Waiting...</span>
                   </div>
                 )}
               </div>
 
-              {/* Your/Player 1's last played card */}
-              <div className="flex flex-col items-center">
-                <span className="text-sm text-gray-400 mb-2">
-                  {isSpectator ? `${currentPlayer?.name}'s Card` : "Your Card"}
-                </span>
+              {/* Player's Card Slot */}
+              <div className="flex flex-col items-center transition-all duration-500">
                 {myLastPlayedCard ? (
-                  <div className={lastCardPlayed?.playerId === currentPlayerId ? "animate-slide-up" : ""}>
+                  <div className={`${lastCardPlayed?.playerId === currentPlayerId ? "animate-slide-up" : ""} scale-90 md:scale-100`}>
                     <CardWithArt card={myLastPlayedCard} size="md" />
                   </div>
                 ) : (
-                  <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/20 
-                                  flex items-center justify-center text-gray-500">
-                    {isSpectator ? "Waiting..." : "Play a card!"}
+                  <div className="w-32 h-44 md:w-40 md:h-56 rounded-xl border-2 border-dashed border-white/20 
+                                  flex items-center justify-center text-gray-400 bg-white/5 hover:border-violet-500/50 transition-colors">
+                    <span className="text-xs">{isSpectator ? "Waiting..." : "Your Slot"}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* VS indicator */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                            w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 
-                            rounded-full flex items-center justify-center shadow-xl shadow-violet-500/30">
-              <span className="font-bold text-white text-lg" style={{ fontFamily: "var(--font-display)" }}>
-                VS
-              </span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 
+                              rounded-full flex items-center justify-center shadow-lg shadow-violet-500/40 ring-4 ring-black/50">
+                <span className="font-bold text-white text-sm md:text-lg italic" style={{ fontFamily: "var(--font-display)" }}>
+                  VS
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Battle Log */}
-        <div className="mb-4">
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10 max-h-24 overflow-y-auto">
-            <p className="text-sm text-gray-400 mb-1">Battle Log</p>
-            <div className="space-y-1">
-              {gameState.playedCards
-                .filter(pc => pc.gameNumber === gameState.gameNumber)
-                .slice(-4)
-                .reverse()
-                .map((pc, i) => {
-                  const player = gameState.players[pc.playerId];
-                  return (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className={pc.playerId === currentPlayerId ? "text-violet-400" : "text-rose-400"}>
-                        {player?.name}
-                      </span>
-                      <span className="text-gray-500">played</span>
-                      <CardMini card={pc.card} />
-                    </div>
-                  );
-                })}
-              {gameState.playedCards.filter(pc => pc.gameNumber === gameState.gameNumber).length === 0 && (
-                <span className="text-gray-500 text-sm">No cards played yet</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Player Area */}
+        {/* Player Area - BOTTOM */}
         {!isSpectator && (
-          <div className="mt-auto">
-            {/* Player HP */}
-            <div className="mb-4 max-w-md mx-auto">
-              {currentPlayer && (
-                <>
+          <div className="mt-auto w-full max-w-4xl mx-auto">
+            {/* Player Stats (Health + Mana) */}
+            <div className="flex items-end justify-center gap-4 mb-2 px-4 w-full md:w-2/3 lg:w-1/2 mx-auto">
+              <div className="flex-1">
+                {currentPlayer && (
                   <HealthBar
                     hp={currentPlayer.hp}
                     playerName={currentPlayer.name}
                     isCurrentTurn={isMyTurn}
                     lastDamage={lastCardPlayed?.playerId !== currentPlayerId ? lastCardPlayed?.damage : null}
                   />
-                  <div className="mt-2 flex items-center justify-center gap-3">
-                    <ManaDisplay
-                      current={currentPlayer.mana ?? 3}
-                      max={currentPlayer.maxMana ?? 5}
-                      size="md"
-                    />
-                    {currentPlayer.statusEffects && currentPlayer.statusEffects.length > 0 && (
-                      <div className="flex gap-1">
-                        {currentPlayer.statusEffects.map((effect, i) => (
-                          <span
-                            key={i}
-                            className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-200 rounded border border-purple-400/30"
-                            title={`${effect.type}: ${effect.value} (${effect.duration ?? 1} rounds)`}
-                          >
-                            {effect.type[0].toUpperCase()}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 text-center text-sm text-gray-400">
-                    Theme: <span className="text-amber-400">&quot;{currentPlayer?.theme || 'Unknown'}&quot;</span>
-                    <span className="ml-2 text-violet-400">({currentPlayer?.matchWins || 0} wins)</span>
-                  </div>
-                </>
+                )}
+              </div>
+              {currentPlayer && (
+                <ManaDisplay
+                  current={currentPlayer.mana ?? 3}
+                  max={currentPlayer.maxMana ?? 5}
+                  size="md"
+                />
               )}
             </div>
 
             {/* Player's Hand */}
-            <div className="bg-gradient-to-t from-black/30 to-transparent rounded-t-3xl pt-6 pb-4 px-4">
+            <div className="bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-4 pb-2 px-4 -mx-4 md:mx-0 md:rounded-t-3xl">
               {currentPlayer && (
                 <Hand
                   cards={currentPlayer.cards}
