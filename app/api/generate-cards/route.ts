@@ -4,6 +4,55 @@ import { getCachedThemeCards, cacheThemeCards, initDatabase } from "@/lib/db";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const POSTGRES_URL = process.env.POSTGRES_URL;
+const LOCAL_GGUF_URL = process.env.LOCAL_GGUF_URL || "http://127.0.0.1:8080";
+
+// Generate image for a single card and return URL
+async function generateCardImage(card: Card): Promise<string | null> {
+  try {
+    const prompt = card.imagePrompt || `${card.name}, fantasy trading card art`;
+
+    // Try local GGUF first
+    try {
+      const ggufResponse = await fetch(`${LOCAL_GGUF_URL}/v1/images/generations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, size: "256x256" }),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+
+      if (ggufResponse.ok) {
+        const data = await ggufResponse.json();
+        if (data.data?.[0]?.b64_json) {
+          return `data:image/png;base64,${data.data[0].b64_json}`;
+        }
+      }
+    } catch {
+      console.log(`[Cards] Local GGUF not available, skipping image for ${card.name}`);
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`[Cards] Error generating image for ${card.name}:`, error);
+    return null;
+  }
+}
+
+// Generate images for all cards in parallel
+async function generateImagesForCards(cards: Card[]): Promise<Card[]> {
+  console.log(`[Cards] Generating images for ${cards.length} cards...`);
+
+  const cardsWithImages = await Promise.all(
+    cards.map(async (card) => {
+      const imageUrl = await generateCardImage(card);
+      return imageUrl ? { ...card, imageUrl } : card;
+    })
+  );
+
+  const successCount = cardsWithImages.filter(c => c.imageUrl).length;
+  console.log(`[Cards] Generated ${successCount}/${cards.length} images`);
+
+  return cardsWithImages;
+}
 
 // Initialize database on first request (only if configured)
 let dbInitialized = false;
@@ -16,7 +65,7 @@ async function ensureDbInitialized() {
 
 const CARD_COLORS: CardColor[] = ["amber", "crimson", "emerald", "violet", "cyan", "rose", "slate"];
 
-const DEFAULT_CARD_COUNT = 7; // Draft mode: generate 7, pick 5
+const DEFAULT_CARD_COUNT = 9; // Draft mode: generate 9, pick 5
 
 // Common game icon keywords for mapping
 const ICON_KEYWORDS = [
@@ -61,10 +110,23 @@ export async function POST(request: NextRequest) {
           console.log(`[Cards] Using cached cards for theme: "${theme}"`);
 
           // Assign new IDs to cached cards for this player
-          const cardsWithIds = cachedCards.map((card, index) => ({
+          let cardsWithIds = cachedCards.map((card, index) => ({
             ...card,
             id: `${playerId || 'card'}-${index}-${Date.now()}`,
           }));
+
+          // Generate images for cards that don't have them
+          const cardsNeedingImages = cardsWithIds.filter(c => !c.imageUrl);
+          if (cardsNeedingImages.length > 0) {
+            console.log(`[Cards] Generating images for ${cardsNeedingImages.length} cached cards without images...`);
+            cardsWithIds = await generateImagesForCards(cardsWithIds);
+
+            // Update cache with new images (non-blocking)
+            const cardsForCache = cardsWithIds.map(card => ({ ...card, id: '' }));
+            cacheThemeCards(theme, cardsForCache).catch(err =>
+              console.error('[Cards] Failed to update cache with images:', err)
+            );
+          }
 
           if (partyHost && roomId && playerId) {
             await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, true); // Always draft mode for initial generation
@@ -301,6 +363,9 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       console.error("[Cards] Response preview:", textContent.text?.slice(0, 500));
       cards = generateMockCards(theme, cardCount);
     }
+
+    // Pre-generate images for all cards (runs in parallel)
+    cards = await generateImagesForCards(cards);
 
     // Cache the newly generated cards (without player-specific IDs)
     if (POSTGRES_URL) {

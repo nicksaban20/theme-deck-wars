@@ -55,6 +55,7 @@ export interface Card {
   // Art generation fields
   imagePrompt?: string; // For AI-generated art
   iconKeyword?: string; // For icon mapping
+  imageUrl?: string; // Pre-generated image URL (cached)
 }
 
 // Player Types

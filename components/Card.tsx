@@ -112,6 +112,13 @@ export function Card({
 
   // Fetch AI image when in AI mode (cloud or local)
   useEffect(() => {
+    // Use pre-generated imageUrl if available
+    if (card.imageUrl) {
+      setImageUrl(card.imageUrl);
+      setIsLoading(false);
+      return;
+    }
+
     if (artStyle !== "ai" && artStyle !== "local-ai") {
       setImageUrl(null);
       setIsLoading(false);
@@ -171,7 +178,7 @@ export function Card({
         setIsLoading(false);
       }
     }
-  }, [artStyle, card.id, card.imagePrompt, card.name]);
+  }, [artStyle, card.id, card.imagePrompt, card.imageUrl, card.name]);
 
   const renderFallbackIcon = () => {
     const keyword = card.iconKeyword?.toLowerCase() || "sword";
