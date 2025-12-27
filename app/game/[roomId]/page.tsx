@@ -100,12 +100,31 @@ export default function GamePage() {
     // Only the first player generates cards for both
     const isFirstPlayer = gameState.playerOrder[0] === connectionId;
     
+    console.log('[generateCards] Card generation check', {
+      isFirstPlayer,
+      connectionId,
+      playerOrder: gameState.playerOrder,
+      firstPlayerId: gameState.playerOrder[0],
+      allPlayers: Object.keys(gameState.players).map(id => ({
+        id,
+        name: gameState.players[id]?.name,
+        theme: gameState.players[id]?.theme,
+        hasDraftPool: gameState.players[id]?.draftPool?.length > 0
+      }))
+    });
+    
     if (isFirstPlayer) {
       console.log('[generateCards] First player generating cards for both players');
       for (const playerId of gameState.playerOrder) {
         const player = gameState.players[playerId];
         if (!player?.theme) {
           console.log(`[generateCards] Skipping player ${playerId} - no theme`);
+          continue;
+        }
+
+        // Check if this player already has cards
+        if (player.draftPool && player.draftPool.length > 0) {
+          console.log(`[generateCards] Player ${player.name} already has ${player.draftPool.length} cards, skipping`);
           continue;
         }
 
@@ -136,17 +155,24 @@ export default function GamePage() {
             });
             
             if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+              const errorText = await response.text();
+              throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
-            console.log(`[generateCards] Successfully generated cards for ${player.name}`);
+            const responseData = await response.json().catch(() => ({}));
+            console.log(`[generateCards] Successfully generated cards for ${player.name}`, responseData);
         } catch (error) {
           console.error(`[generateCards] Failed to generate cards for ${player.name}:`, error);
           // Don't return early - continue generating for other players
         }
       }
     } else {
-      console.log('[generateCards] Not first player, waiting for cards to be generated');
+      console.log('[generateCards] Not first player, waiting for cards to be generated', {
+        myConnectionId: connectionId,
+        firstPlayerId: gameState.playerOrder[0],
+        myPlayer: currentPlayer?.name,
+        myDraftPool: currentPlayer?.draftPool?.length || 0
+      });
     }
   }, [gameState, connectionId, roomId]);
 
