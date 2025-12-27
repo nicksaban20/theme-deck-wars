@@ -883,14 +883,24 @@ export default class GameServer implements Party.Server {
           isDraft?: boolean;
         };
 
+        console.log(`[onRequest] Received cards for player ${body.playerId}, isDraft: ${body.isDraft}, card count: ${body.cards.length}`);
+
         const player = this.state.players[body.playerId];
-        if (player) {
-          if (body.isDraft) {
-            player.draftPool = body.cards;
-            player.draftedCards = [];
-          } else {
-            player.cards = body.cards;
-          }
+        if (!player) {
+          console.error(`[onRequest] Player ${body.playerId} not found in game state`);
+          return new Response(JSON.stringify({ error: "Player not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        if (body.isDraft) {
+          player.draftPool = body.cards;
+          player.draftedCards = [];
+          console.log(`[onRequest] Set draftPool for ${player.name}: ${player.draftPool.length} cards`);
+        } else {
+          player.cards = body.cards;
+          console.log(`[onRequest] Set cards for ${player.name}: ${player.cards.length} cards`);
         }
 
         // Check if both players have their cards/draft pool
@@ -898,26 +908,37 @@ export default class GameServer implements Party.Server {
           (p) => (body.isDraft ? p.draftPool.length > 0 : p.cards.length > 0)
         );
 
+        console.log(`[onRequest] All players have cards: ${allHaveCards}, players:`, Object.values(this.state.players).map(p => ({
+          name: p.name,
+          draftPool: p.draftPool.length,
+          cards: p.cards.length
+        })));
+
         if (allHaveCards) {
           if (body.isDraft) {
             this.state.phase = "drafting";
             this.state.message = `Draft phase! Select ${CARDS_PER_PLAYER} cards from your pool of ${DRAFT_POOL_SIZE}.`;
+            console.log(`[onRequest] Transitioning to drafting phase`);
           } else {
             this.state.phase = "battle";
             this.state.currentTurn = this.state.playerOrder[0];
             const firstPlayer = this.state.players[this.state.playerOrder[0]];
             this.state.message = `Battle begins! ${firstPlayer?.name}'s turn`;
+            console.log(`[onRequest] Transitioning to battle phase`);
           }
           this.broadcastState();
+        } else {
+          console.log(`[onRequest] Waiting for other player's cards...`);
         }
 
         await this.saveState();
         
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ success: true, allHaveCards }), {
           headers: { "Content-Type": "application/json" },
         });
       } catch (error) {
-        return new Response(JSON.stringify({ error: "Invalid request" }), {
+        console.error(`[onRequest] Error processing card request:`, error);
+        return new Response(JSON.stringify({ error: "Invalid request", details: error instanceof Error ? error.message : String(error) }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });

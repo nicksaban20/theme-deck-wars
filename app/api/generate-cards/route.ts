@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
           }));
           
           if (partyHost && roomId && playerId) {
-            await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, cardCount > 5);
+            await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, true); // Always draft mode for initial generation
           }
           
           return NextResponse.json({ cards: cardsWithIds, cached: true });
@@ -199,7 +199,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       
       const mockCards = generateMockCards(theme, cardCount);
       if (partyHost && roomId && playerId) {
-        await sendCardsToParty(partyHost, roomId, playerId, mockCards, cardCount > 5);
+        await sendCardsToParty(partyHost, roomId, playerId, mockCards, true); // Always draft mode for initial generation
       }
       return NextResponse.json({ cards: mockCards });
     }
@@ -296,7 +296,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
     }
 
     if (partyHost && roomId && playerId) {
-      await sendCardsToParty(partyHost, roomId, playerId, cards, cardCount > 5);
+      await sendCardsToParty(partyHost, roomId, playerId, cards, true); // Always draft mode for initial generation
     }
 
     return NextResponse.json({ cards, cached: false });
@@ -334,7 +334,9 @@ async function sendCardsToParty(
     const protocol = partyHost.includes("localhost") ? "http" : "https";
     const url = `${protocol}://${partyHost}/party/${roomId}`;
     
-    await fetch(url, {
+    console.log(`[sendCardsToParty] Sending ${cards.length} cards to PartyKit for player ${playerId}, isDraft: ${isDraft}`);
+    
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -345,8 +347,17 @@ async function sendCardsToParty(
         isDraft,
       }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[sendCardsToParty] Failed to send cards to PartyKit: HTTP ${response.status} - ${errorText}`);
+      throw new Error(`PartyKit request failed: ${response.status} - ${errorText}`);
+    }
+
+    console.log(`[sendCardsToParty] Successfully sent cards to PartyKit for player ${playerId}`);
   } catch (error) {
-    console.error("Failed to send cards to PartyKit:", error);
+    console.error(`[sendCardsToParty] Error sending cards to PartyKit for player ${playerId}:`, error);
+    throw error; // Re-throw to let caller handle it
   }
 }
 
