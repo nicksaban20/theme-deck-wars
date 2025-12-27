@@ -64,62 +64,7 @@ const sizeClasses = {
   lg: "w-56 h-76",
 };
 
-// Iconify CDN - much more reliable than game-icons.net directly
-// Format: https://api.iconify.design/game-icons/{icon-name}.svg?color=white
-const ICONIFY_BASE = "https://api.iconify.design/game-icons";
-
-// Map icon keywords to iconify game-icons names
-const iconNameMap: Record<string, string> = {
-  sword: "crossed-swords",
-  shield: "shield",
-  skull: "skull",
-  fire: "flame",
-  lightning: "lightning-helix",
-  heart: "heart-plus",
-  star: "star-formation",
-  crown: "crown",
-  dragon: "dragon-head",
-  wolf: "wolf-head",
-  eagle: "eagle-head",
-  snake: "snake",
-  spider: "spider-face",
-  castle: "castle",
-  tower: "tower-flag",
-  gem: "gem",
-  potion: "potion-ball",
-  scroll: "scroll-unfurled",
-  book: "book-cover",
-  wand: "fairy-wand",
-  staff: "wizard-staff",
-  bow: "high-shot",
-  arrow: "arrow-cluster",
-  axe: "battle-axe",
-  hammer: "hammer-drop",
-  dagger: "stiletto",
-  claw: "wolverine-claws",
-  fist: "fist",
-  boot: "boot-stomp",
-  helmet: "viking-helmet",
-  armor: "breastplate",
-  ring: "ring",
-  eye: "eye-target",
-  moon: "moon",
-  sun: "sun",
-  cloud: "cloud",
-  leaf: "leaf",
-  tree: "oak",
-  mountain: "mountain-peak",
-  wave: "wave-crest",
-  bomb: "bomb",
-  trap: "bear-trap",
-  key: "key",
-  lock: "padlock",
-  chain: "chain",
-  wing: "feathered-wing",
-  horn: "horn-call",
-};
-
-// Inline SVG icons as fallback (guaranteed to work) - more detailed icons
+// Inline SVG icons as fallback (guaranteed to work)
 const fallbackIcons: Record<string, string> = {
   sword: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M507.31 72.57L439.43 4.69c-6.25-6.25-16.38-6.25-22.63 0l-22.63 22.63c-6.25 6.25-6.25 16.38 0 22.63l5.66 5.66L292.69 162.75l-34.34-34.34c-6.25-6.25-16.38-6.25-22.63 0l-11.31 11.31c-6.25 6.25-6.25 16.38 0 22.63l34.34 34.34-192 192c-6.25 6.25-6.25 16.38 0 22.63l22.63 22.63c6.25 6.25 16.38 6.25 22.63 0l192-192 34.34 34.34c6.25 6.25 16.38 6.25 22.63 0l11.31-11.31c6.25-6.25 6.25-16.38 0-22.63l-34.34-34.34L445.17 101.5l5.66 5.66c6.25 6.25 16.38 6.25 22.63 0l22.63-22.63c6.25-6.25 6.25-16.38 0-22.63l11.22-11.31z"/></svg>`,
   shield: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M466.5 83.7l-192-80a48.15 48.15 0 00-36.9 0l-192 80C27.7 91.1 16 108.6 16 128c0 198.5 114.5 335.7 221.5 380.3 11.8 4.9 25.1 4.9 36.9 0C360.1 472.6 496 349.3 496 128c0-19.4-11.7-36.9-29.5-44.3z"/></svg>`,
@@ -134,19 +79,6 @@ const fallbackIcons: Record<string, string> = {
   potion: `<svg viewBox="0 0 448 512" fill="currentColor"><path d="M446.6 222.7c-1.8-8-6.8-15.4-12.5-22.1L336 89.3V32h-16V0H128v32h-16v57.3L13.8 200.6C8.1 207.3 3.2 214.7 1.4 222.7c-4.2 19.4 2.4 39.1 17.4 51.9L160 384v96c0 17.7 14.3 32 32 32h64c17.7 0 32-14.3 32-32v-96l141.2-109.4c15-12.8 21.6-32.5 17.4-51.9z"/></svg>`,
 };
 
-function getIconUrl(keyword: string, color: string = "ffffff"): string {
-  const iconName = iconNameMap[keyword?.toLowerCase()] || "crossed-swords";
-  return `${ICONIFY_BASE}/${iconName}.svg?color=%23${color}`;
-}
-
-function getPollinationsUrl(prompt: string, width: number = 256, height: number = 256): string {
-  // Keep prompt short for faster generation
-  const shortPrompt = prompt.slice(0, 80);
-  const encodedPrompt = encodeURIComponent(shortPrompt + ", fantasy art");
-  // Use smaller dimensions for faster loading, add model param for speed
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=turbo`;
-}
-
 export function Card({
   card,
   onClick,
@@ -157,60 +89,60 @@ export function Card({
   artStyle = "pattern",
 }: CardProps) {
   const colors = colorClasses[card.color] || colorClasses.slate;
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageTimedOut, setImageTimedOut] = useState(false);
-  const [shouldLoadImage, setShouldLoadImage] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  // Reset loading states when card or artStyle changes
+  // Fetch AI image when in AI mode
   useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
-    setImageTimedOut(false);
-    setShouldLoadImage(false);
-    setRetryCount(0);
-  }, [card.id, artStyle]);
+    if (artStyle !== "ai") {
+      setImageUrl(null);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
 
-  // Stagger image loading - use card ID hash to create delay
-  useEffect(() => {
-    if (artStyle !== "ai") return;
-    
-    // Create a delay based on card ID to stagger requests (0-3 seconds)
+    // Create a delay based on card ID to stagger requests
     const hash = card.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const delay = (hash % 6) * 500; // 0, 500, 1000, 1500, 2000, or 2500ms
-    
-    const timer = setTimeout(() => {
-      setShouldLoadImage(true);
+    const delay = (hash % 5) * 400; // 0-1600ms stagger
+
+    const timeoutId = setTimeout(() => {
+      fetchImage();
     }, delay);
-    
-    return () => clearTimeout(timer);
-  }, [artStyle, card.id]);
 
-  // Timeout for AI art - fall back after 20 seconds
-  useEffect(() => {
-    if (artStyle !== "ai" || imageLoaded || imageError || !shouldLoadImage) return;
-    
-    const timeout = setTimeout(() => {
-      if (!imageLoaded) {
-        // Try retry first
-        if (retryCount < 1) {
-          setRetryCount(r => r + 1);
-          setImageError(false);
-        } else {
-          setImageTimedOut(true);
+    return () => clearTimeout(timeoutId);
+
+    async function fetchImage() {
+      setIsLoading(true);
+      setHasError(false);
+
+      try {
+        const prompt = card.imagePrompt || `${card.name}, fantasy trading card art`;
+        
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to generate image");
         }
-      }
-    }, 20000); // 20 second timeout
-    
-    return () => clearTimeout(timeout);
-  }, [artStyle, imageLoaded, imageError, shouldLoadImage, retryCount]);
 
-  const artSizes = {
-    sm: { width: 100, height: 80 },
-    md: { width: 160, height: 120 },
-    lg: { width: 200, height: 160 },
-  };
+        const data = await response.json();
+        if (data.image) {
+          setImageUrl(data.image);
+        } else {
+          throw new Error("No image in response");
+        }
+      } catch (error) {
+        console.error("Error fetching AI image:", error);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [artStyle, card.id, card.imagePrompt, card.name]);
 
   const renderFallbackIcon = () => {
     const keyword = card.iconKeyword?.toLowerCase() || "sword";
@@ -242,10 +174,10 @@ export function Card({
       );
     }
 
-    // AI Art mode (Pollinations.ai) - takes time to generate
+    // AI Art mode (Cloudflare Workers AI)
     if (artStyle === "ai") {
-      // If timed out after retries, show icon-style fallback
-      if (imageTimedOut) {
+      // Error fallback - show icon
+      if (hasError) {
         return (
           <div 
             className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
@@ -260,54 +192,25 @@ export function Card({
         );
       }
 
-      // Build URL - add retry param to bust cache on retry
-      const basePrompt = card.imagePrompt || card.name;
-      const imageUrl = getPollinationsUrl(basePrompt) + (retryCount > 0 ? `&retry=${retryCount}` : '');
-
       return (
         <div className="flex-1 bg-black/30 rounded-lg mb-2 overflow-hidden relative">
-          {/* Always show pattern background */}
+          {/* Pattern background while loading */}
           <div className="absolute inset-0 card-pattern-grid opacity-30" />
           
-          {/* Show icon while waiting to load */}
-          {!imageLoaded && (
+          {/* Loading state */}
+          {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-              {!shouldLoadImage ? (
-                // Waiting in queue
-                <>
-                  <div className="text-2xl opacity-40">{getCardEmoji(card.color)}</div>
-                  <span className="text-[9px] text-white/40 mt-1">Queued...</span>
-                </>
-              ) : (
-                // Actively loading
-                <>
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
-                  <span className="text-[9px] text-white/50">
-                    {retryCount > 0 ? 'Retrying...' : 'Generating...'}
-                  </span>
-                </>
-              )}
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
+              <span className="text-[9px] text-white/50">Generating...</span>
             </div>
           )}
           
-          {/* The actual image - only load when shouldLoadImage is true */}
-          {shouldLoadImage && (
+          {/* The actual image */}
+          {imageUrl && (
             <img
-              key={`${card.id}-${retryCount}`}
               src={imageUrl}
               alt={card.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              crossOrigin="anonymous"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => {
-                if (retryCount < 1) {
-                  setRetryCount(r => r + 1);
-                } else {
-                  setImageTimedOut(true);
-                }
-              }}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
             />
           )}
         </div>
