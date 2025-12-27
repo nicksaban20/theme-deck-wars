@@ -150,6 +150,18 @@ export default function GamePage() {
     }
   }, [gameState, connectionId, roomId]);
 
+  // Trigger card generation when entering generating phase
+  useEffect(() => {
+    if (gameState?.phase === "generating" && !isGenerating && connectionId && !isSpectatorMode) {
+      // Small delay to ensure state is fully updated
+      const timeoutId = setTimeout(() => {
+        setIsGenerating(true);
+        generateCards();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [gameState?.phase, isGenerating, connectionId, isSpectatorMode, generateCards]);
+
   // Loading state
   if (!connected) {
     return (

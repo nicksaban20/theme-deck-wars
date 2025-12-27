@@ -331,10 +331,17 @@ async function sendCardsToParty(
   isDraft: boolean = true
 ) {
   try {
-    const protocol = partyHost.includes("localhost") ? "http" : "https";
-    const url = `${protocol}://${partyHost}/party/${roomId}`;
+    // Handle PartyKit URL format - it might already include protocol or might be just the host
+    let url: string;
+    if (partyHost.startsWith("http://") || partyHost.startsWith("https://")) {
+      url = `${partyHost}/party/${roomId}`;
+    } else {
+      const protocol = partyHost.includes("localhost") || partyHost.includes("127.0.0.1") ? "http" : "https";
+      url = `${protocol}://${partyHost}/party/${roomId}`;
+    }
     
     console.log(`[sendCardsToParty] Sending ${cards.length} cards to PartyKit for player ${playerId}, isDraft: ${isDraft}`);
+    console.log(`[sendCardsToParty] URL: ${url}`);
     
     const response = await fetch(url, {
       method: "POST",
@@ -354,7 +361,8 @@ async function sendCardsToParty(
       throw new Error(`PartyKit request failed: ${response.status} - ${errorText}`);
     }
 
-    console.log(`[sendCardsToParty] Successfully sent cards to PartyKit for player ${playerId}`);
+    const responseData = await response.json().catch(() => ({}));
+    console.log(`[sendCardsToParty] Successfully sent cards to PartyKit for player ${playerId}`, responseData);
   } catch (error) {
     console.error(`[sendCardsToParty] Error sending cards to PartyKit for player ${playerId}:`, error);
     throw error; // Re-throw to let caller handle it
