@@ -60,10 +60,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cloudflare returns binary image data
-    const imageBuffer = await cfResponse.arrayBuffer();
-    const base64Image = Buffer.from(imageBuffer).toString("base64");
-    const dataUrl = `data:image/png;base64,${base64Image}`;
+    // Cloudflare returns JSON with base64 image in result.image
+    const cfData = await cfResponse.json() as { result?: { image?: string }; success?: boolean; errors?: unknown[] };
+    
+    if (!cfData.result?.image) {
+      console.error("Cloudflare AI returned no image:", cfData);
+      return NextResponse.json(
+        { error: "No image in response" },
+        { status: 500 }
+      );
+    }
+
+    // The image is already base64 encoded
+    const dataUrl = `data:image/jpeg;base64,${cfData.result.image}`;
 
     // Cache the result
     if (imageCache.size >= MAX_CACHE_SIZE) {
