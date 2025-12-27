@@ -185,6 +185,11 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
     setMatchEnded(null);
   }, [sendMessage]);
 
+  const continueMatch = useCallback(() => {
+    sendMessage({ type: "continue-match" });
+    setRoundEnded(null);
+  }, [sendMessage]);
+
   return {
     gameState,
     connected,
@@ -203,6 +208,7 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
     draftDiscard,
     draftConfirm,
     playCard,
+    continueMatch,
     requestRematch,
     requestSwapRematch,
     acceptRematch,

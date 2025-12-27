@@ -81,6 +81,7 @@ export type ClientMessage =
   | { type: 'draft-discard'; cardId: string } // Discard a card during draft
   | { type: 'draft-confirm' } // Confirm draft selection
   | { type: 'play-card'; cardId: string }
+  | { type: 'continue-match' } // Continue to next game in best-of-3
   | { type: 'request-rematch' } // Request a rematch
   | { type: 'request-swap-rematch' } // Request rematch with swapped themes
   | { type: 'accept-rematch' }; // Accept rematch request

@@ -42,6 +42,7 @@ export default function GamePage() {
     draftDiscard,
     draftConfirm,
     playCard,
+    continueMatch,
     requestRematch,
     requestSwapRematch,
     acceptRematch,
@@ -264,6 +265,7 @@ export default function GamePage() {
           gameState={gameState}
           currentPlayerId={connectionId}
           roundEnded={roundEnded}
+          onContinue={continueMatch}
         />
       );
 

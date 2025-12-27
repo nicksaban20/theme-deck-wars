@@ -119,6 +119,9 @@ export default class GameServer implements Party.Server {
         case "play-card":
           await this.handlePlayCard(sender, data.cardId);
           break;
+        case "continue-match":
+          this.handleContinueMatch(sender);
+          break;
         case "request-rematch":
           this.handleRematchRequest(sender, false);
           break;
@@ -461,6 +464,34 @@ export default class GameServer implements Party.Server {
     const players = Object.values(this.state.players);
     if (players.length !== 2) return "0-0";
     return `${players[0].matchWins}-${players[1].matchWins}`;
+  }
+
+  handleContinueMatch(conn: Party.Connection) {
+    if (this.state.phase !== "round-ended") {
+      this.sendError(conn, "Cannot continue match now");
+      return;
+    }
+
+    // Reset players for the new game
+    for (const playerId of this.state.playerOrder) {
+      const player = this.state.players[playerId];
+      if (player) {
+        player.hp = STARTING_HP;
+        player.cards = [];
+        player.draftPool = [];
+        player.draftedCards = [];
+        player.isReady = true; // Keep ready
+        player.isDraftReady = false;
+      }
+    }
+
+    // Reset game state for new game
+    this.state.phase = "generating";
+    this.state.round = 1;
+    this.state.lastDamage = null;
+    this.state.roundWinner = null;
+    this.state.currentTurn = null;
+    this.state.message = `Game ${this.state.gameNumber} - Generating new cards...`;
   }
 
   handleRematchRequest(conn: Party.Connection, swapThemes: boolean) {

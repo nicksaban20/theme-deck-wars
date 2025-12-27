@@ -1,28 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { GameState } from "@/lib/types";
 
 interface RoundOverProps {
   gameState: GameState;
   currentPlayerId: string;
   roundEnded: { winner: string | null; gameNumber: number } | null;
+  onContinue: () => void;
 }
 
-export function RoundOver({ gameState, currentPlayerId, roundEnded }: RoundOverProps) {
+export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }: RoundOverProps) {
   const [countdown, setCountdown] = useState(5);
+  const hasContinuedRef = useRef(false);
   
   const roundWinner = roundEnded?.winner ? gameState.players[roundEnded.winner] : null;
   const isWinner = roundEnded?.winner === currentPlayerId;
   const isTie = roundEnded?.winner === null;
   const players = Object.values(gameState.players);
 
+  // Check if this player is the first in order (only one player should trigger continue)
+  const isFirstPlayer = gameState.playerOrder[0] === currentPlayerId;
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown(c => c > 0 ? c - 1 : 0);
+      setCountdown(c => {
+        if (c <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return c - 1;
+      });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Trigger continue when countdown reaches 0 (only first player does this)
+  useEffect(() => {
+    if (countdown === 0 && isFirstPlayer && !hasContinuedRef.current) {
+      hasContinuedRef.current = true;
+      onContinue();
+    }
+  }, [countdown, isFirstPlayer, onContinue]);
 
   return (
     <div className="min-h-screen arena-bg flex flex-col items-center justify-center p-8">
@@ -97,16 +116,24 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded }: RoundOverP
 
         {/* Next game countdown */}
         <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-gray-300 mb-2">Next game starting in...</p>
-          <div className="text-6xl font-bold text-violet-400">
-            {countdown}
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            New cards will be generated!
-          </p>
+          {countdown > 0 ? (
+            <>
+              <p className="text-gray-300 mb-2">Next game starting in...</p>
+              <div className="text-6xl font-bold text-violet-400">
+                {countdown}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                New cards will be generated!
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-gray-300">Starting next game...</p>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
