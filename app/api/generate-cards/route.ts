@@ -239,8 +239,8 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       
       cards = (parsed.cards as RawCard[]).map((card, index: number) => {
         // Validate and sanitize card data
-        const validColor = (card.color && ['amber', 'crimson', 'emerald', 'violet', 'cyan', 'rose', 'slate'].includes(card.color))
-          ? card.color
+        const validColor: CardColor = (card.color && ['amber', 'crimson', 'emerald', 'violet', 'cyan', 'rose', 'slate'].includes(card.color))
+          ? (card.color as CardColor)
           : 'slate';
         
         return {
