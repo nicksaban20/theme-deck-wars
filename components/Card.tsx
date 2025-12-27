@@ -160,26 +160,51 @@ export function Card({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageTimedOut, setImageTimedOut] = useState(false);
+  const [shouldLoadImage, setShouldLoadImage] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Reset loading states when card or artStyle changes
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
     setImageTimedOut(false);
+    setShouldLoadImage(false);
+    setRetryCount(0);
   }, [card.id, artStyle]);
 
-  // Timeout for AI art - fall back to pattern after 15 seconds
+  // Stagger image loading - use card ID hash to create delay
   useEffect(() => {
-    if (artStyle !== "ai" || imageLoaded || imageError) return;
+    if (artStyle !== "ai") return;
+    
+    // Create a delay based on card ID to stagger requests (0-3 seconds)
+    const hash = card.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    const delay = (hash % 6) * 500; // 0, 500, 1000, 1500, 2000, or 2500ms
+    
+    const timer = setTimeout(() => {
+      setShouldLoadImage(true);
+    }, delay);
+    
+    return () => clearTimeout(timer);
+  }, [artStyle, card.id]);
+
+  // Timeout for AI art - fall back after 20 seconds
+  useEffect(() => {
+    if (artStyle !== "ai" || imageLoaded || imageError || !shouldLoadImage) return;
     
     const timeout = setTimeout(() => {
       if (!imageLoaded) {
-        setImageTimedOut(true);
+        // Try retry first
+        if (retryCount < 1) {
+          setRetryCount(r => r + 1);
+          setImageError(false);
+        } else {
+          setImageTimedOut(true);
+        }
       }
-    }, 15000); // 15 second timeout
+    }, 20000); // 20 second timeout
     
     return () => clearTimeout(timeout);
-  }, [artStyle, imageLoaded, imageError, card.id]);
+  }, [artStyle, imageLoaded, imageError, shouldLoadImage, retryCount]);
 
   const artSizes = {
     sm: { width: 100, height: 80 },
@@ -219,8 +244,8 @@ export function Card({
 
     // AI Art mode (Pollinations.ai) - takes time to generate
     if (artStyle === "ai") {
-      // If timed out, show icon-style fallback instead
-      if (imageTimedOut || imageError) {
+      // If timed out after retries, show icon-style fallback
+      if (imageTimedOut) {
         return (
           <div 
             className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
@@ -229,42 +254,62 @@ export function Card({
             <div className="absolute inset-0 card-pattern-grid opacity-20" />
             <div className="relative z-10 flex flex-col items-center justify-center">
               {renderFallbackIcon()}
-              {imageTimedOut && !imageError && (
-                <span className="text-[8px] text-white/40 mt-1">AI unavailable</span>
-              )}
+              <span className="text-[8px] text-white/40 mt-1">Art unavailable</span>
             </div>
           </div>
         );
       }
 
-      const imageUrl = card.imagePrompt 
-        ? getPollinationsUrl(card.imagePrompt)
-        : getPollinationsUrl(card.name);
+      // Build URL - add retry param to bust cache on retry
+      const basePrompt = card.imagePrompt || card.name;
+      const imageUrl = getPollinationsUrl(basePrompt) + (retryCount > 0 ? `&retry=${retryCount}` : '');
 
       return (
         <div className="flex-1 bg-black/30 rounded-lg mb-2 overflow-hidden relative">
           {/* Always show pattern background */}
           <div className="absolute inset-0 card-pattern-grid opacity-30" />
           
-          {/* Loading state with helpful text */}
+          {/* Show icon while waiting to load */}
           {!imageLoaded && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
-              <span className="text-[10px] text-white/50">Loading art...</span>
+              {!shouldLoadImage ? (
+                // Waiting in queue
+                <>
+                  <div className="text-2xl opacity-40">{getCardEmoji(card.color)}</div>
+                  <span className="text-[9px] text-white/40 mt-1">Queued...</span>
+                </>
+              ) : (
+                // Actively loading
+                <>
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
+                  <span className="text-[9px] text-white/50">
+                    {retryCount > 0 ? 'Retrying...' : 'Generating...'}
+                  </span>
+                </>
+              )}
             </div>
           )}
           
-          {/* The actual image - loads in background */}
-          <img
-            src={imageUrl}
-            alt={card.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            crossOrigin="anonymous"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
-          />
+          {/* The actual image - only load when shouldLoadImage is true */}
+          {shouldLoadImage && (
+            <img
+              key={`${card.id}-${retryCount}`}
+              src={imageUrl}
+              alt={card.name}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+                imageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              crossOrigin="anonymous"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                if (retryCount < 1) {
+                  setRetryCount(r => r + 1);
+                } else {
+                  setImageTimedOut(true);
+                }
+              }}
+            />
+          )}
         </div>
       );
     }
