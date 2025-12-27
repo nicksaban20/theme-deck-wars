@@ -59,17 +59,17 @@ export async function POST(request: NextRequest) {
         const cachedCards = await getCachedThemeCards(theme);
         if (cachedCards && cachedCards.length > 0) {
           console.log(`[Cards] Using cached cards for theme: "${theme}"`);
-          
+
           // Assign new IDs to cached cards for this player
           const cardsWithIds = cachedCards.map((card, index) => ({
             ...card,
             id: `${playerId || 'card'}-${index}-${Date.now()}`,
           }));
-          
+
           if (partyHost && roomId && playerId) {
             await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, true); // Always draft mode for initial generation
           }
-          
+
           return NextResponse.json({ cards: cardsWithIds, cached: true });
         }
       } catch (error) {
@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
     if (!ANTHROPIC_API_KEY) {
       console.warn("No ANTHROPIC_API_KEY found, using mock cards");
       const mockCards = generateMockCards(theme, cardCount);
-      
+
       if (partyHost && roomId && playerId) {
         await sendCardsToParty(partyHost, roomId, playerId, mockCards, true); // Always draft mode for initial generation
       }
-      
+
       return NextResponse.json({ cards: mockCards });
     }
 
@@ -174,29 +174,54 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
   ]
 }`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 3500,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ] as ClaudeMessage[],
-      }),
-    });
+    // Add timeout to prevent indefinite waiting
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    let response: Response;
+    try {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 3500,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ] as ClaudeMessage[],
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Handle timeout or network errors
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.warn("[Cards] Anthropic API timeout after 15 seconds, using mock cards");
+      } else {
+        console.error("[Cards] Anthropic API fetch error:", fetchError);
+      }
+
+      const mockCards = generateMockCards(theme, cardCount);
+      if (partyHost && roomId && playerId) {
+        await sendCardsToParty(partyHost, roomId, playerId, mockCards, true);
+      }
+      return NextResponse.json({ cards: mockCards, timeout: true });
+    }
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Anthropic API error:", errorText);
-      
+
       const mockCards = generateMockCards(theme, cardCount);
       if (partyHost && roomId && playerId) {
         await sendCardsToParty(partyHost, roomId, playerId, mockCards, true); // Always draft mode for initial generation
@@ -206,7 +231,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
 
     const data = (await response.json()) as ClaudeResponse;
     const textContent = data.content.find((c) => c.type === "text");
-    
+
     if (!textContent) {
       throw new Error("No text content in response");
     }
@@ -221,7 +246,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       if (!parsed.cards || !Array.isArray(parsed.cards)) {
         throw new Error("Invalid card structure in Claude response");
       }
-      
+
       interface RawCard {
         name?: string;
         attack?: number;
@@ -236,13 +261,13 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
         imagePrompt?: string;
         iconKeyword?: string;
       }
-      
+
       cards = (parsed.cards as RawCard[]).map((card, index: number) => {
         // Validate and sanitize card data
         const validColor: CardColor = (card.color && ['amber', 'crimson', 'emerald', 'violet', 'cyan', 'rose', 'slate'].includes(card.color))
           ? (card.color as CardColor)
           : 'slate';
-        
+
         return {
           id: `${playerId || 'card'}-${index}-${Date.now()}`,
           name: card.name || `Card ${index + 1}`,
@@ -261,7 +286,7 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
           iconKeyword: card.iconKeyword || getDefaultIcon(validColor),
         } as Card;
       });
-      
+
       // Ensure we have the right number of cards
       if (cards.length < cardCount) {
         console.warn(`[Cards] Only got ${cards.length} cards, generating ${cardCount - cards.length} more`);
@@ -339,10 +364,10 @@ async function sendCardsToParty(
       const protocol = partyHost.includes("localhost") || partyHost.includes("127.0.0.1") ? "http" : "https";
       url = `${protocol}://${partyHost}/party/${roomId}`;
     }
-    
+
     console.log(`[sendCardsToParty] Sending ${cards.length} cards to PartyKit for player ${playerId}, isDraft: ${isDraft}`);
     console.log(`[sendCardsToParty] URL: ${url}`);
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -372,7 +397,7 @@ async function sendCardsToParty(
 function generateMockCards(theme: string, count: number): Card[] {
   const themeWords = theme.split(" ");
   const baseName = themeWords[0] || "Mystery";
-  
+
   const cardTemplates = [
     { prefix: "Mighty", attack: 7, defense: 2, ability: "Deal 2 bonus damage on the first round", icon: "sword" },
     { prefix: "Swift", attack: 4, defense: 4, ability: "If your HP is below half, gain +2 attack", icon: "lightning" },

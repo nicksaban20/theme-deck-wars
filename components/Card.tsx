@@ -97,22 +97,22 @@ export function Card({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-  
+
   const rarityColors = useMemo(() => ({
     common: "text-gray-300",
     rare: "text-blue-300",
     epic: "text-purple-300",
   }), []);
-  
+
   const rarityIcons = useMemo(() => ({
     common: "⚪",
     rare: "🔵",
     epic: "🟣",
   }), []);
 
-  // Fetch AI image when in AI mode
+  // Fetch AI image when in AI mode (cloud or local)
   useEffect(() => {
-    if (artStyle !== "ai") {
+    if (artStyle !== "ai" && artStyle !== "local-ai") {
       setImageUrl(null);
       setIsLoading(false);
       setHasError(false);
@@ -135,15 +135,15 @@ export function Card({
 
       try {
         const prompt = card.imagePrompt || `${card.name}, fantasy trading card art`;
-        
+
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
+
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, cardId: card.id }),
+          body: JSON.stringify({ prompt, cardId: card.id, artStyle }),
           signal: controller.signal,
         });
 
@@ -176,13 +176,13 @@ export function Card({
   const renderFallbackIcon = () => {
     const keyword = card.iconKeyword?.toLowerCase() || "sword";
     const svgContent = fallbackIcons[keyword] || fallbackIcons.sword;
-    
+
     const iconSize = size === "sm" ? "w-10 h-10" : size === "md" ? "w-14 h-14" : "w-18 h-18";
-    
+
     return (
-      <div 
+      <div
         className={`${iconSize} text-white`}
-        style={{ 
+        style={{
           filter: `drop-shadow(0 0 12px ${colors.hex}) drop-shadow(0 0 4px ${colors.hex})`,
         }}
         dangerouslySetInnerHTML={{ __html: svgContent }}
@@ -203,12 +203,12 @@ export function Card({
       );
     }
 
-    // AI Art mode (Cloudflare Workers AI)
-    if (artStyle === "ai") {
+    // AI Art mode (Cloud or Local)
+    if (artStyle === "ai" || artStyle === "local-ai") {
       // Error fallback - show icon
       if (hasError) {
         return (
-          <div 
+          <div
             className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
             style={{ backgroundColor: `${colors.hex}15` }}
           >
@@ -225,15 +225,17 @@ export function Card({
         <div className="flex-1 bg-black/30 rounded-lg mb-2 overflow-hidden relative">
           {/* Pattern background while loading */}
           <div className="absolute inset-0 card-pattern-grid opacity-30" />
-          
+
           {/* Loading state */}
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
-              <span className="text-[9px] text-white/50">Generating...</span>
+              <span className="text-[9px] text-white/50">
+                {artStyle === "local-ai" ? "Local AI..." : "Generating..."}
+              </span>
             </div>
           )}
-          
+
           {/* The actual image - works with both base64 and R2 URLs */}
           {imageUrl && (
             <img
@@ -250,13 +252,13 @@ export function Card({
     // Icons mode - use inline SVG icons (instant, no loading needed)
     if (artStyle === "icons") {
       return (
-        <div 
+        <div
           className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
           style={{ backgroundColor: `${colors.hex}15` }}
         >
           {/* Subtle pattern background */}
           <div className="absolute inset-0 card-pattern-dots opacity-10" />
-          
+
           {/* Icon - renders instantly with inline SVG */}
           <div className="relative z-10 flex items-center justify-center">
             {renderFallbackIcon()}
@@ -283,20 +285,20 @@ export function Card({
     >
       {/* Card border frame */}
       <div className="absolute inset-0 border border-white/10 rounded-xl pointer-events-none" />
-      
+
       {/* Card content */}
       <div className="relative h-full flex flex-col p-3">
         {/* Header - Name, Mana Cost, Rarity */}
         <div className="bg-black/40 rounded-lg px-2 py-1 mb-2 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-1">
-            <ManaCostBadge 
-              cost={cardWithDefaults.manaCost} 
-              available={999} 
+            <ManaCostBadge
+              cost={cardWithDefaults.manaCost}
+              available={999}
               size={size === "sm" ? "sm" : "md"}
             />
-            <h3 
+            <h3
               className="font-bold text-white text-center truncate flex-1"
-              style={{ 
+              style={{
                 fontFamily: "var(--font-display)",
                 fontSize: size === "sm" ? "0.7rem" : size === "md" ? "0.85rem" : "1rem"
               }}
@@ -401,7 +403,7 @@ export function Card({
                 )}
               </div>
             ) : cardWithDefaults.ability ? (
-              <p 
+              <p
                 className={`${colors.accent} text-center leading-tight`}
                 style={{ fontSize: size === "md" ? "0.6rem" : "0.7rem" }}
               >
@@ -446,7 +448,7 @@ function getCardEmoji(color: CardColor): string {
 export function CardMini({ card }: { card: CardType }) {
   const colors = colorClasses[card.color] || colorClasses.slate;
   const cardWithDefaults = getCardDefaults(card);
-  
+
   return (
     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r ${colors.gradient}`}>
       <span className="font-semibold text-white text-sm" style={{ fontFamily: "var(--font-display)" }}>

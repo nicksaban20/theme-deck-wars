@@ -16,7 +16,7 @@ export function ArtStyleProvider({ children }: { children: ReactNode }) {
   // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("cardArtStyle");
-    if (saved && ["pattern", "ai", "icons"].includes(saved)) {
+    if (saved && ["pattern", "ai", "local-ai", "icons"].includes(saved)) {
       setArtStyle(saved as CardArtStyle);
     }
   }, []);

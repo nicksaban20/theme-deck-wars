@@ -99,7 +99,7 @@ export default function GamePage() {
 
     // Only the first player generates cards for both
     const isFirstPlayer = gameState.playerOrder[0] === connectionId;
-    
+
     console.log('[generateCards] Card generation check', {
       isFirstPlayer,
       connectionId,
@@ -112,60 +112,66 @@ export default function GamePage() {
         hasDraftPool: gameState.players[id]?.draftPool?.length > 0
       }))
     });
-    
+
     if (isFirstPlayer) {
-      console.log('[generateCards] First player generating cards for both players');
-      for (const playerId of gameState.playerOrder) {
+      console.log('[generateCards] First player generating cards for both players in parallel');
+
+      // Generate cards for both players in parallel (instead of sequential)
+      const generationPromises = gameState.playerOrder.map(async (playerId) => {
         const player = gameState.players[playerId];
         if (!player?.theme) {
           console.log(`[generateCards] Skipping player ${playerId} - no theme`);
-          continue;
+          return;
         }
 
         // Check if this player already has cards
         if (player.draftPool && player.draftPool.length > 0) {
           console.log(`[generateCards] Player ${player.name} already has ${player.draftPool.length} cards, skipping`);
-          continue;
+          return;
         }
 
         try {
-            // Get strategy info from previous games for adaptive generation
-            const lastGame = gameState.gameHistory && gameState.gameHistory.length > 0 
-              ? gameState.gameHistory[gameState.gameHistory.length - 1] 
-              : null;
-            const isPlayer1 = gameState.playerOrder[0] === playerId;
-            const previousStrategy = lastGame ? (isPlayer1 ? lastGame.player1Strategy : lastGame.player2Strategy) : undefined;
-            const opponentStrategy = lastGame ? (isPlayer1 ? lastGame.player2Strategy : lastGame.player1Strategy) : undefined;
-            
-            console.log(`[generateCards] Generating cards for ${player.name} with strategy:`, previousStrategy || 'balanced');
+          // Get strategy info from previous games for adaptive generation
+          const lastGame = gameState.gameHistory && gameState.gameHistory.length > 0
+            ? gameState.gameHistory[gameState.gameHistory.length - 1]
+            : null;
+          const isPlayer1 = gameState.playerOrder[0] === playerId;
+          const previousStrategy = lastGame ? (isPlayer1 ? lastGame.player1Strategy : lastGame.player2Strategy) : undefined;
+          const opponentStrategy = lastGame ? (isPlayer1 ? lastGame.player2Strategy : lastGame.player1Strategy) : undefined;
 
-            const response = await fetch("/api/generate-cards", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                theme: player.theme,
-                playerId: playerId,
-                roomId: roomId,
-                partyHost: PARTYKIT_HOST,
-                count: DRAFT_POOL_SIZE, // Generate 9 for draft
-                gameNumber: gameState.gameNumber,
-                previousStrategy,
-                opponentStrategy,
-              }),
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            
-            const responseData = await response.json().catch(() => ({}));
-            console.log(`[generateCards] Successfully generated cards for ${player.name}`, responseData);
+          console.log(`[generateCards] Generating cards for ${player.name} with strategy:`, previousStrategy || 'balanced');
+
+          const response = await fetch("/api/generate-cards", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              theme: player.theme,
+              playerId: playerId,
+              roomId: roomId,
+              partyHost: PARTYKIT_HOST,
+              count: DRAFT_POOL_SIZE, // Generate 9 for draft
+              gameNumber: gameState.gameNumber,
+              previousStrategy,
+              opponentStrategy,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+
+          const responseData = await response.json().catch(() => ({}));
+          console.log(`[generateCards] Successfully generated cards for ${player.name}`, responseData);
         } catch (error) {
           console.error(`[generateCards] Failed to generate cards for ${player.name}:`, error);
-          // Don't return early - continue generating for other players
+          // Don't throw - let other player's generation continue
         }
-      }
+      });
+
+      // Wait for all generation to complete in parallel
+      await Promise.all(generationPromises);
+      console.log('[generateCards] All card generation completed');
     } else {
       console.log('[generateCards] Not first player, waiting for cards to be generated', {
         myConnectionId: connectionId,
@@ -236,137 +242,137 @@ export default function GamePage() {
   const renderGameContent = () => {
     // Render based on game phase
     switch (gameState.phase) {
-    case "lobby":
-      const isRoomCreator = gameState.playerOrder[0] === connectionId;
-      return (
-        <Lobby
-          roomId={roomId}
-          gameState={gameState}
-          onJoin={join}
-          hasJoined={hasJoined}
-          onToggleBlindDraft={toggleBlindDraft}
-          isRoomCreator={isRoomCreator}
-        />
-      );
-
-    case "theme-select":
-      if (isActualSpectator) {
+      case "lobby":
+        const isRoomCreator = gameState.playerOrder[0] === connectionId;
         return (
-          <div className="min-h-screen arena-bg flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
-                👁️ Spectating
+          <Lobby
+            roomId={roomId}
+            gameState={gameState}
+            onJoin={join}
+            hasJoined={hasJoined}
+            onToggleBlindDraft={toggleBlindDraft}
+            isRoomCreator={isRoomCreator}
+          />
+        );
+
+      case "theme-select":
+        if (isActualSpectator) {
+          return (
+            <div className="min-h-screen arena-bg flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
+                  👁️ Spectating
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-4">Players are choosing themes...</h2>
+                <p className="text-gray-400">The battle will begin soon!</p>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-4">Players are choosing themes...</h2>
-              <p className="text-gray-400">The battle will begin soon!</p>
             </div>
-          </div>
-        );
-      }
-      return (
-        <ThemePicker
-          currentPlayer={currentPlayer}
-          opponent={opponent || null}
-          onSetTheme={setTheme}
-          onReady={ready}
-        />
-      );
-
-    case "generating":
-      const themes = {
-        player1: Object.values(gameState.players)[0]?.theme || "",
-        player2: Object.values(gameState.players)[1]?.theme || "",
-      };
-      return <GeneratingCards themes={themes} />;
-
-    case "drafting":
-      if (isActualSpectator) {
+          );
+        }
         return (
-          <div className="min-h-screen arena-bg flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
-                👁️ Spectating
+          <ThemePicker
+            currentPlayer={currentPlayer}
+            opponent={opponent || null}
+            onSetTheme={setTheme}
+            onReady={ready}
+          />
+        );
+
+      case "generating":
+        const themes = {
+          player1: Object.values(gameState.players)[0]?.theme || "",
+          player2: Object.values(gameState.players)[1]?.theme || "",
+        };
+        return <GeneratingCards themes={themes} />;
+
+      case "drafting":
+        if (isActualSpectator) {
+          return (
+            <div className="min-h-screen arena-bg flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
+                  👁️ Spectating
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-4">Players are drafting their decks...</h2>
+                <p className="text-gray-400">Each player is selecting 5 cards from their pool of 7.</p>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-4">Players are drafting their decks...</h2>
-              <p className="text-gray-400">Each player is selecting 5 cards from their pool of 7.</p>
             </div>
-          </div>
+          );
+        }
+        return (
+          <DraftPhase
+            currentPlayer={currentPlayer}
+            opponent={opponent || null}
+            onSelectCard={draftSelect}
+            onDiscardCard={draftDiscard}
+            onConfirmDraft={draftConfirm}
+            blindDraft={gameState.blindDraft || false}
+          />
         );
-      }
-      return (
-        <DraftPhase
-          currentPlayer={currentPlayer}
-          opponent={opponent || null}
-          onSelectCard={draftSelect}
-          onDiscardCard={draftDiscard}
-          onConfirmDraft={draftConfirm}
-          blindDraft={gameState.blindDraft || false}
-        />
-      );
 
-    case "battle":
-      if (!connectionId) {
+      case "battle":
+        if (!connectionId) {
+          return (
+            <div className="min-h-screen arena-bg flex items-center justify-center">
+              <p className="text-gray-400">Joining battle...</p>
+            </div>
+          );
+        }
+        return (
+          <BattleArena
+            gameState={gameState}
+            currentPlayerId={connectionId}
+            onPlayCard={playCard}
+            lastCardPlayed={lastCardPlayed}
+            abilityTriggered={abilityTriggered}
+            spectatorCount={spectatorCount}
+            isSpectator={isActualSpectator}
+          />
+        );
+
+      case "round-ended":
+        if (!connectionId) {
+          return (
+            <div className="min-h-screen arena-bg flex items-center justify-center">
+              <p className="text-gray-400">Loading...</p>
+            </div>
+          );
+        }
+        return (
+          <RoundOver
+            gameState={gameState}
+            currentPlayerId={connectionId}
+            roundEnded={roundEnded}
+            onContinue={continueMatch}
+          />
+        );
+
+      case "match-ended":
+        if (!connectionId) {
+          return (
+            <div className="min-h-screen arena-bg flex items-center justify-center">
+              <p className="text-gray-400">Loading results...</p>
+            </div>
+          );
+        }
+        return (
+          <GameOver
+            gameState={gameState}
+            currentPlayerId={connectionId}
+            spectatorCount={spectatorCount}
+            rematchRequested={rematchRequested}
+            onRequestRematch={requestRematch}
+            onRequestSwapRematch={requestSwapRematch}
+            onAcceptRematch={acceptRematch}
+          />
+        );
+
+      default:
         return (
           <div className="min-h-screen arena-bg flex items-center justify-center">
-            <p className="text-gray-400">Joining battle...</p>
+            <p className="text-gray-400">Unknown game state</p>
           </div>
         );
-      }
-      return (
-        <BattleArena
-          gameState={gameState}
-          currentPlayerId={connectionId}
-          onPlayCard={playCard}
-          lastCardPlayed={lastCardPlayed}
-          abilityTriggered={abilityTriggered}
-          spectatorCount={spectatorCount}
-          isSpectator={isActualSpectator}
-        />
-      );
-
-    case "round-ended":
-      if (!connectionId) {
-        return (
-          <div className="min-h-screen arena-bg flex items-center justify-center">
-            <p className="text-gray-400">Loading...</p>
-          </div>
-        );
-      }
-      return (
-        <RoundOver
-          gameState={gameState}
-          currentPlayerId={connectionId}
-          roundEnded={roundEnded}
-          onContinue={continueMatch}
-        />
-      );
-
-    case "match-ended":
-      if (!connectionId) {
-        return (
-          <div className="min-h-screen arena-bg flex items-center justify-center">
-            <p className="text-gray-400">Loading results...</p>
-          </div>
-        );
-      }
-      return (
-        <GameOver
-          gameState={gameState}
-          currentPlayerId={connectionId}
-          spectatorCount={spectatorCount}
-          rematchRequested={rematchRequested}
-          onRequestRematch={requestRematch}
-          onRequestSwapRematch={requestSwapRematch}
-          onAcceptRematch={acceptRematch}
-        />
-      );
-
-    default:
-      return (
-        <div className="min-h-screen arena-bg flex items-center justify-center">
-          <p className="text-gray-400">Unknown game state</p>
-        </div>
-      );
     }
   };
 

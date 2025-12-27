@@ -8,11 +8,20 @@ interface GeneratingCardsProps {
 
 export function GeneratingCards({ themes }: GeneratingCardsProps) {
   const [dots, setDots] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setDots((d) => (d.length >= 3 ? "" : d + "."));
     }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Track elapsed time for user feedback
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -43,13 +52,13 @@ export function GeneratingCards({ themes }: GeneratingCardsProps) {
           ))}
         </div>
 
-        <h2 
+        <h2
           className="text-3xl font-bold text-white mb-4"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Generating Cards{dots}
         </h2>
-        
+
         <p className="text-gray-400 mb-8">
           The AI is crafting your unique battle decks!
         </p>
@@ -66,9 +75,22 @@ export function GeneratingCards({ themes }: GeneratingCardsProps) {
           </div>
         </div>
 
-        <p className="mt-8 text-sm text-gray-500">
-          This may take 10-15 seconds...
-        </p>
+        {/* Loading time feedback */}
+        <div className="mt-8 text-sm">
+          {elapsedSeconds < 10 ? (
+            <p className="text-gray-500">
+              This may take up to 15 seconds...
+            </p>
+          ) : elapsedSeconds < 20 ? (
+            <p className="text-amber-400">
+              ⏳ Taking longer than expected ({elapsedSeconds}s)...
+            </p>
+          ) : (
+            <p className="text-amber-400">
+              ⏳ Almost there... generating fallback cards ({elapsedSeconds}s)
+            </p>
+          )}
+        </div>
       </div>
 
       <style jsx>{`

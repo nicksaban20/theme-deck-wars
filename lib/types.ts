@@ -3,7 +3,7 @@ export type CardColor = 'amber' | 'crimson' | 'emerald' | 'violet' | 'cyan' | 'r
 export type CardRarity = 'common' | 'rare' | 'epic';
 
 // Art style options for cards
-export type CardArtStyle = 'pattern' | 'ai' | 'icons';
+export type CardArtStyle = 'pattern' | 'ai' | 'local-ai' | 'icons';
 
 // Perk Types
 export interface PassivePerk {
@@ -79,13 +79,13 @@ export interface Player {
 }
 
 // Game State
-export type GamePhase = 
-  | 'lobby' 
-  | 'theme-select' 
-  | 'generating' 
+export type GamePhase =
+  | 'lobby'
+  | 'theme-select'
+  | 'generating'
   | 'drafting'  // New phase for card selection
   | 'reveal'    // Card reveal phase before battle
-  | 'battle' 
+  | 'battle'
   | 'round-ended' // Single round ended, match continues
   | 'match-ended'; // Best-of-3 complete
 

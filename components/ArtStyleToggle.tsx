@@ -8,23 +8,29 @@ interface ArtStyleToggleProps {
 }
 
 const artStyles: { value: CardArtStyle; label: string; icon: string; description: string }[] = [
-  { 
-    value: "pattern", 
-    label: "Patterns", 
+  {
+    value: "pattern",
+    label: "Patterns",
     icon: "🎨",
-    description: "Classic gradient patterns (fastest)" 
+    description: "Classic gradient patterns (fastest)"
   },
-  { 
-    value: "ai", 
-    label: "AI Art", 
-    icon: "🖼️",
-    description: "AI-generated images (may take time to load)" 
+  {
+    value: "local-ai",
+    label: "Local AI",
+    icon: "💻",
+    description: "Fast local AI (requires server)"
   },
-  { 
-    value: "icons", 
-    label: "Icons", 
+  {
+    value: "ai",
+    label: "Cloud AI",
+    icon: "☁️",
+    description: "Cloud AI images (may be slow)"
+  },
+  {
+    value: "icons",
+    label: "Icons",
     icon: "⚔️",
-    description: "Game icons (consistent style)" 
+    description: "Game icons (consistent style)"
   },
 ];
 
@@ -38,11 +44,10 @@ export function ArtStyleToggle({ compact = false }: ArtStyleToggleProps) {
           <button
             key={style.value}
             onClick={() => setArtStyle(style.value)}
-            className={`px-3 py-1.5 rounded-md text-sm transition-all ${
-              artStyle === style.value
+            className={`px-3 py-1.5 rounded-md text-sm transition-all ${artStyle === style.value
                 ? "bg-violet-500 text-white"
                 : "text-gray-400 hover:text-white hover:bg-white/10"
-            }`}
+              }`}
             title={style.description}
           >
             {style.icon}
@@ -60,11 +65,10 @@ export function ArtStyleToggle({ compact = false }: ArtStyleToggleProps) {
           <button
             key={style.value}
             onClick={() => setArtStyle(style.value)}
-            className={`p-3 rounded-xl border transition-all ${
-              artStyle === style.value
+            className={`p-3 rounded-xl border transition-all ${artStyle === style.value
                 ? "bg-violet-500/20 border-violet-500/50 text-white"
                 : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
-            }`}
+              }`}
           >
             <span className="text-2xl block mb-1">{style.icon}</span>
             <span className="text-sm font-medium">{style.label}</span>
