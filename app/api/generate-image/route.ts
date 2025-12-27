@@ -202,7 +202,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Fall back to Cloudflare if local failed or disabled
-    if (!base64Image) {
+    // CRITICAL: Do NOT use Cloudflare if user specifically requested 'local-ai'
+    if (!base64Image && artStyle !== "local-ai") {
       // Check for Cloudflare credentials
       if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
         if (LOCAL_DIFFUSION_ENABLED) {
