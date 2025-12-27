@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       const mockCards = generateMockCards(theme, cardCount);
       
       if (partyHost && roomId && playerId) {
-        await sendCardsToParty(partyHost, roomId, playerId, mockCards, cardCount > 5);
+        await sendCardsToParty(partyHost, roomId, playerId, mockCards, true); // Always draft mode for initial generation
       }
       
       return NextResponse.json({ cards: mockCards });
