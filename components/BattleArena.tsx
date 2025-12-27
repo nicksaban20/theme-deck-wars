@@ -289,8 +289,8 @@ export function BattleArena({
                     )}
                   </div>
                   <div className="mt-2 text-center text-sm text-gray-400">
-                    Theme: <span className="text-amber-400">&quot;{currentPlayer.theme}&quot;</span>
-                    <span className="ml-2 text-violet-400">({currentPlayer.matchWins} wins)</span>
+                    Theme: <span className="text-amber-400">&quot;{currentPlayer?.theme || 'Unknown'}&quot;</span>
+                    <span className="ml-2 text-violet-400">({currentPlayer?.matchWins || 0} wins)</span>
                   </div>
                 </>
               )}

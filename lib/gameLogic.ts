@@ -294,6 +294,32 @@ export function getCardDefaults(card: Card): Card {
 }
 
 /**
+ * Check if player has enough mana to play a card (with round modifiers)
+ */
+export function canPlayCard(player: Player, card: Card, gameState: GameState): boolean {
+  const cardWithDefaults = getCardDefaults(card);
+  const effectiveCost = getEffectiveManaCost(card, gameState);
+  const playerMana = player.mana ?? STARTING_MANA;
+  return playerMana >= effectiveCost;
+}
+
+/**
+ * Get effective mana cost of a card (with round modifiers applied)
+ */
+export function getEffectiveManaCost(card: Card, gameState: GameState): number {
+  const cardWithDefaults = getCardDefaults(card);
+  let effectiveCost = cardWithDefaults.manaCost;
+  
+  // Apply round modifier (Mana Surge: -1 mana cost)
+  const roundModifier = getRoundModifier(gameState.round);
+  if (roundModifier && roundModifier.name === "Mana Surge") {
+    effectiveCost = Math.max(1, effectiveCost - 1);
+  }
+  
+  return effectiveCost;
+}
+
+/**
  * Calculate turn order based on card speed (higher speed plays first)
  * Round 1 modifier doubles speed difference
  */
@@ -670,6 +696,15 @@ export function calculateDamageWithPerks(
   let bonusDamage = 0;
   let abilityTriggered: string | null = null;
 
+  // Get round modifier for applying stat bonuses
+  const roundModifier = getRoundModifier(gameState.round);
+  
+  // Apply round modifiers to base attack
+  if (roundModifier) {
+    if (roundModifier.name === "Power Play") baseDamage += 1;
+    if (roundModifier.name === "Final Stand") baseDamage += 2;
+  }
+
   // Apply passive damage boost
   const passivePerks = evaluatePassivePerks(card, attacker, gameState);
   baseDamage += passivePerks.damageBoost;
@@ -679,8 +714,8 @@ export function calculateDamageWithPerks(
     const defendingCardDefaults = getCardDefaults(defendingCard);
     let effectiveDefense = defendingCardDefaults.defense;
     
-    // Apply round modifiers
-    if (modifier && modifier.round === 4) {
+    // Apply round modifiers to defense
+    if (roundModifier && roundModifier.name === "Defensive Stance") {
       // Defensive Stance: +1 defense
       effectiveDefense += 1;
     }

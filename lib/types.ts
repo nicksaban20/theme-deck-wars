@@ -129,7 +129,7 @@ export interface GameState {
 
 // Message Types for PartyKit
 export type ClientMessage =
-  | { type: 'join'; playerName: string; isSpectator?: boolean }
+  | { type: 'join'; playerName: string; isSpectator?: boolean; blindDraft?: boolean }
   | { type: 'set-theme'; theme: string }
   | { type: 'ready' }
   | { type: 'draft-select'; cardId: string } // Select a card during draft

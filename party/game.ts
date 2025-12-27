@@ -127,7 +127,7 @@ export default class GameServer implements Party.Server {
 
       switch (data.type) {
         case "join":
-          this.handleJoin(sender, data.playerName, data.isSpectator);
+          this.handleJoin(sender, data.playerName, data.isSpectator, data.blindDraft);
           break;
         case "set-theme":
           this.handleSetTheme(sender, data.theme);
@@ -182,7 +182,7 @@ export default class GameServer implements Party.Server {
     }
   }
 
-  handleJoin(conn: Party.Connection, playerName: string, isSpectator?: boolean) {
+  handleJoin(conn: Party.Connection, playerName: string, isSpectator?: boolean, blindDraft?: boolean) {
     try {
       // Validate player name
       const sanitizedName = (playerName || `Player ${Object.keys(this.state.players).length + 1}`)
@@ -221,6 +221,11 @@ export default class GameServer implements Party.Server {
       const player = createPlayer(conn.id, sanitizedName);
       this.state.players[conn.id] = player;
       this.state.playerOrder.push(conn.id);
+
+      // Set blind draft mode if requested by the first player
+      if (Object.keys(this.state.players).length === 1 && blindDraft !== undefined) {
+        this.state.blindDraft = blindDraft;
+      }
 
       if (Object.keys(this.state.players).length === 1) {
         this.state.message = "Waiting for opponent...";
@@ -706,6 +711,29 @@ export default class GameServer implements Party.Server {
     const players = Object.values(this.state.players);
     if (players.length !== 2) return "0-0";
     return `${players[0].matchWins}-${players[1].matchWins}`;
+  }
+
+  handleToggleBlindDraft(conn: Party.Connection) {
+    const player = this.state.players[conn.id];
+    if (!player) {
+      this.sendError(conn, "Player not found");
+      return;
+    }
+
+    // Only the room creator (first player) can toggle this
+    if (this.state.playerOrder[0] !== conn.id) {
+      this.sendError(conn, "Only the room creator can toggle blind draft.");
+      return;
+    }
+
+    if (this.state.phase !== "lobby" && this.state.phase !== "theme-select") {
+      this.sendError(conn, "Blind draft can only be toggled in lobby or theme selection phase.");
+      return;
+    }
+
+    this.state.blindDraft = !this.state.blindDraft;
+    this.state.message = `Blind Draft Mode: ${this.state.blindDraft ? "ON" : "OFF"}`;
+    console.log(`[Game] Blind Draft Toggled: ${this.state.blindDraft}`);
   }
 
   handleContinueMatch(conn: Party.Connection) {
