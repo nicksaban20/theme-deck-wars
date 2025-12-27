@@ -205,12 +205,13 @@ export function Card({
             </div>
           )}
           
-          {/* The actual image */}
+          {/* The actual image - works with both base64 and R2 URLs */}
           {imageUrl && (
             <img
               src={imageUrl}
               alt={card.name}
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              onError={() => setHasError(true)}
             />
           )}
         </div>

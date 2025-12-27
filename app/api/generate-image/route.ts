@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCachedImageUrl, cacheImageUrl, initDatabase } from "@/lib/db";
+import { uploadImageToBlob, base64ToBuffer, isBlobConfigured } from "@/lib/blob";
 
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const POSTGRES_URL = process.env.POSTGRES_URL;
 
 const CF_API_BASE = "https://api.cloudflare.com/client/v4/accounts";
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
-// Simple in-memory cache to avoid regenerating the same images
-const imageCache = new Map<string, string>();
+// Simple in-memory cache as fallback
+const memoryCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 100;
+
+// Initialize database on first request
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (!dbInitialized && POSTGRES_URL) {
+    await initDatabase();
+    dbInitialized = true;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +33,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check cache first - use cardId if provided for unique caching
-    const cacheKey = cardId 
-      ? `${cardId}-${prompt.slice(0, 50).toLowerCase().trim()}`
-      : prompt.slice(0, 100).toLowerCase().trim();
+    // Normalize prompt for caching
+    const normalizedPrompt = prompt.slice(0, 100).toLowerCase().trim();
     
-    if (imageCache.has(cacheKey)) {
-      console.log(`[Image API] Cache hit for: ${cacheKey.slice(0, 30)}...`);
-      return NextResponse.json({ image: imageCache.get(cacheKey) });
+    // Initialize database if configured
+    await ensureDbInitialized();
+
+    // 1. Check database cache first (persistent)
+    if (POSTGRES_URL) {
+      const cachedUrl = await getCachedImageUrl(normalizedPrompt);
+      if (cachedUrl) {
+        console.log(`[Image API] DB cache hit for: ${normalizedPrompt.slice(0, 30)}...`);
+        return NextResponse.json({ image: cachedUrl, cached: true });
+      }
+    }
+
+    // 2. Check in-memory cache (fallback)
+    const cacheKey = cardId 
+      ? `${cardId}-${normalizedPrompt}`
+      : normalizedPrompt;
+    
+    if (memoryCache.has(cacheKey)) {
+      console.log(`[Image API] Memory cache hit for: ${cacheKey.slice(0, 30)}...`);
+      return NextResponse.json({ image: memoryCache.get(cacheKey), cached: true });
     }
     
     console.log(`[Image API] Generating image for: ${prompt.slice(0, 50)}...`);
@@ -77,20 +104,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // The image is already base64 encoded
-    const dataUrl = `data:image/jpeg;base64,${cfData.result.image}`;
+    const base64Image = cfData.result.image;
+    console.log(`[Image API] Successfully generated image`);
+
+    // Try to upload to Vercel Blob for persistent storage
+    let imageUrl: string;
     
-    console.log(`[Image API] Successfully generated image, size: ${dataUrl.length} chars`);
-
-    // Cache the result
-    if (imageCache.size >= MAX_CACHE_SIZE) {
-      // Remove oldest entry
-      const firstKey = imageCache.keys().next().value;
-      if (firstKey) imageCache.delete(firstKey);
+    if (isBlobConfigured()) {
+      const imageBuffer = base64ToBuffer(base64Image);
+      const blobUrl = await uploadImageToBlob(imageBuffer, normalizedPrompt);
+      
+      if (blobUrl) {
+        imageUrl = blobUrl;
+        
+        // Cache URL in database
+        if (POSTGRES_URL) {
+          await cacheImageUrl(normalizedPrompt, blobUrl);
+        }
+        
+        console.log(`[Image API] Stored image in Vercel Blob: ${blobUrl}`);
+      } else {
+        // Fall back to base64 data URL
+        imageUrl = `data:image/jpeg;base64,${base64Image}`;
+      }
+    } else {
+      // No Blob configured, use base64 data URL
+      imageUrl = `data:image/jpeg;base64,${base64Image}`;
     }
-    imageCache.set(cacheKey, dataUrl);
 
-    return NextResponse.json({ image: dataUrl });
+    // Cache in memory as fallback
+    if (memoryCache.size >= MAX_CACHE_SIZE) {
+      const firstKey = memoryCache.keys().next().value;
+      if (firstKey) memoryCache.delete(firstKey);
+    }
+    memoryCache.set(cacheKey, imageUrl);
+
+    return NextResponse.json({ image: imageUrl, cached: false });
   } catch (error) {
     console.error("Error generating image:", error);
     return NextResponse.json(
@@ -120,4 +169,3 @@ export async function GET(request: NextRequest) {
 
   return POST(postRequest);
 }
-

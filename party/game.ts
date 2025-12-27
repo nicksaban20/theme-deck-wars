@@ -24,12 +24,29 @@ import {
   WINS_TO_WIN_MATCH,
 } from "../lib/gameLogic";
 
+// Get the Next.js app URL for API calls
+const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 export default class GameServer implements Party.Server {
   state: GameState;
   rematchRequests: Map<string, { swapThemes: boolean }> = new Map();
+  gameHistoryRecorded: boolean = false;
 
   constructor(readonly room: Party.Room) {
     this.state = createInitialState(room.id);
+  }
+
+  // Record game history via API
+  async recordGameHistory(action: "start" | "end", data: Record<string, unknown>) {
+    try {
+      await fetch(`${NEXT_APP_URL}/api/game-history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...data }),
+      });
+    } catch (error) {
+      console.error("Failed to record game history:", error);
+    }
   }
 
   async onStart() {
@@ -304,6 +321,21 @@ export default class GameServer implements Party.Server {
       this.state.currentTurn = this.state.playerOrder[0];
       const firstPlayer = this.state.players[this.state.playerOrder[0]];
       this.state.message = `Battle begins! ${firstPlayer?.name}'s turn`;
+      
+      // Record game start in history (only once per match)
+      if (!this.gameHistoryRecorded) {
+        this.gameHistoryRecorded = true;
+        const players = Object.values(this.state.players);
+        if (players.length >= 2) {
+          this.recordGameHistory("start", {
+            roomId: this.state.roomId,
+            player1Name: players[0].name,
+            player1Theme: players[0].theme,
+            player2Name: players[1].name,
+            player2Theme: players[1].theme,
+          });
+        }
+      }
     } else {
       this.state.message = `${player.name} is ready! Waiting for opponent to finish drafting...`;
     }
@@ -431,12 +463,22 @@ export default class GameServer implements Party.Server {
     if (matchEnded) {
       this.state.phase = "match-ended";
       this.state.matchWinner = matchWinner;
+      
+      let winnerName: string | null = null;
       if (matchWinner) {
         const winnerPlayer = this.state.players[matchWinner];
+        winnerName = winnerPlayer?.name || null;
         this.state.message = `${winnerPlayer?.name} wins the match ${winnerPlayer?.matchWins}-${WINS_TO_WIN_MATCH - winnerPlayer?.matchWins}!`;
       } else {
         this.state.message = "Match ended in a tie!";
       }
+      
+      // Record match end in history
+      this.recordGameHistory("end", {
+        roomId: this.state.roomId,
+        winnerName,
+        matchScore: this.getScoreString(),
+      });
       
       const matchEndedMsg: ServerMessage = { type: "match-ended", winner: matchWinner };
       this.room.broadcast(JSON.stringify(matchEndedMsg));

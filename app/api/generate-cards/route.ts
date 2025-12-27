@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Card, CardColor } from "@/lib/types";
+import { getCachedThemeCards, cacheThemeCards, initDatabase } from "@/lib/db";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const POSTGRES_URL = process.env.POSTGRES_URL;
+
+// Initialize database on first request (only if configured)
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (!dbInitialized && POSTGRES_URL) {
+    await initDatabase();
+    dbInitialized = true;
+  }
+}
 
 const CARD_COLORS: CardColor[] = ["amber", "crimson", "emerald", "violet", "cyan", "rose", "slate"];
 
@@ -38,6 +49,29 @@ export async function POST(request: NextRequest) {
     }
 
     const cardCount = Math.min(Math.max(count, 5), 10); // Between 5 and 10
+
+    // Initialize database if configured
+    await ensureDbInitialized();
+
+    // Check cache for existing cards for this theme
+    if (POSTGRES_URL) {
+      const cachedCards = await getCachedThemeCards(theme);
+      if (cachedCards && cachedCards.length > 0) {
+        console.log(`[Cards] Using cached cards for theme: "${theme}"`);
+        
+        // Assign new IDs to cached cards for this player
+        const cardsWithIds = cachedCards.map((card, index) => ({
+          ...card,
+          id: `${playerId || 'card'}-${index}-${Date.now()}`,
+        }));
+        
+        if (partyHost && roomId && playerId) {
+          await sendCardsToParty(partyHost, roomId, playerId, cardsWithIds, cardCount > 5);
+        }
+        
+        return NextResponse.json({ cards: cardsWithIds, cached: true });
+      }
+    }
 
     if (!ANTHROPIC_API_KEY) {
       console.warn("No ANTHROPIC_API_KEY found, using mock cards");
@@ -144,11 +178,20 @@ Respond ONLY with a valid JSON object in this exact format, no other text:
       cards = generateMockCards(theme, cardCount);
     }
 
+    // Cache the newly generated cards (without player-specific IDs)
+    if (POSTGRES_URL) {
+      const cardsForCache = cards.map(card => ({
+        ...card,
+        id: '', // Remove player-specific ID for caching
+      }));
+      await cacheThemeCards(theme, cardsForCache);
+    }
+
     if (partyHost && roomId && playerId) {
       await sendCardsToParty(partyHost, roomId, playerId, cards, cardCount > 5);
     }
 
-    return NextResponse.json({ cards });
+    return NextResponse.json({ cards, cached: false });
   } catch (error) {
     console.error("Error generating cards:", error);
     return NextResponse.json(
