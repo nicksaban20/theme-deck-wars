@@ -139,9 +139,12 @@ function getIconUrl(keyword: string, color: string = "ffffff"): string {
   return `${ICONIFY_BASE}/${iconName}.svg?color=%23${color}`;
 }
 
-function getPollinationsUrl(prompt: string, width: number = 300, height: number = 400): string {
-  const encodedPrompt = encodeURIComponent(prompt + ", trading card game art, fantasy style, high quality, detailed illustration");
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${prompt.length}`;
+function getPollinationsUrl(prompt: string, width: number = 256, height: number = 256): string {
+  // Keep prompt short for faster generation
+  const shortPrompt = prompt.slice(0, 80);
+  const encodedPrompt = encodeURIComponent(shortPrompt + ", fantasy art");
+  // Use smaller dimensions for faster loading, add model param for speed
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=turbo`;
 }
 
 export function Card({
@@ -156,12 +159,27 @@ export function Card({
   const colors = colorClasses[card.color] || colorClasses.slate;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageTimedOut, setImageTimedOut] = useState(false);
 
   // Reset loading states when card or artStyle changes
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+    setImageTimedOut(false);
   }, [card.id, artStyle]);
+
+  // Timeout for AI art - fall back to pattern after 15 seconds
+  useEffect(() => {
+    if (artStyle !== "ai" || imageLoaded || imageError) return;
+    
+    const timeout = setTimeout(() => {
+      if (!imageLoaded) {
+        setImageTimedOut(true);
+      }
+    }, 15000); // 15 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [artStyle, imageLoaded, imageError, card.id]);
 
   const artSizes = {
     sm: { width: 100, height: 80 },
@@ -201,8 +219,26 @@ export function Card({
 
     // AI Art mode (Pollinations.ai) - takes time to generate
     if (artStyle === "ai") {
+      // If timed out, show icon-style fallback instead
+      if (imageTimedOut || imageError) {
+        return (
+          <div 
+            className="flex-1 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative"
+            style={{ backgroundColor: `${colors.hex}15` }}
+          >
+            <div className="absolute inset-0 card-pattern-grid opacity-20" />
+            <div className="relative z-10 flex flex-col items-center justify-center">
+              {renderFallbackIcon()}
+              {imageTimedOut && !imageError && (
+                <span className="text-[8px] text-white/40 mt-1">AI unavailable</span>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       const imageUrl = card.imagePrompt 
-        ? getPollinationsUrl(card.imagePrompt, artSizes[size].width * 2, artSizes[size].height * 2)
+        ? getPollinationsUrl(card.imagePrompt)
         : getPollinationsUrl(card.name);
 
       return (
@@ -211,17 +247,10 @@ export function Card({
           <div className="absolute inset-0 card-pattern-grid opacity-30" />
           
           {/* Loading state with helpful text */}
-          {!imageLoaded && !imageError && (
+          {!imageLoaded && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-1" />
-              <span className="text-[10px] text-white/50">Generating...</span>
-            </div>
-          )}
-          
-          {/* Error fallback */}
-          {imageError && (
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <span className="text-3xl opacity-60">{getCardEmoji(card.color)}</span>
+              <span className="text-[10px] text-white/50">Loading art...</span>
             </div>
           )}
           
@@ -232,7 +261,7 @@ export function Card({
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
-            loading="lazy"
+            crossOrigin="anonymous"
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
           />
