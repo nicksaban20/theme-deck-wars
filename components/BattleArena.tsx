@@ -120,26 +120,29 @@ export function BattleArena({
 
 
           {/* CENTER: Round Timer / Info */}
-          <div className="shrink-0 flex flex-col items-center mx-2">
-            <div className="relative">
+          <div className="shrink-0 flex flex-col items-center mx-2 z-10">
+            <div className="relative group">
               {/* Round Badge */}
-              <div className="bg-slate-900/90 border-2 border-slate-700/50 px-4 py-1 rounded-lg transform skew-x-[-10deg] shadow-lg">
-                <span className="block text-xs text-gray-400 font-bold uppercase text-center transform skew-x-[10deg] tracking-widest">Round</span>
-                <span className="block text-2xl font-black text-white text-center transform skew-x-[10deg] leading-none" style={{ fontFamily: "var(--font-display)" }}>
-                  {gameState.round}
-                </span>
+              <div className="bg-slate-900/90 border-2 border-slate-700/50 px-5 py-1.5 rounded-lg transform skew-x-[-10deg] shadow-lg
+                              group-hover:border-slate-500/80 transition-colors cursor-help">
+                <div className="transform skew-x-[10deg] flex flex-col items-center">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mb-0.5">Round</span>
+                  <span className="text-2xl font-black text-white leading-none" style={{ fontFamily: "var(--font-display)" }}>
+                    {gameState.round}
+                  </span>
+                </div>
               </div>
-              {/* VS Badge */}
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-rose-600 w-8 h-8 flex items-center justify-center rounded-full border-2 border-white shadow-lg z-10">
+              {/* VS Badge - Moved down to allow text reading */}
+              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-rose-600 w-8 h-8 flex items-center justify-center rounded-full border-2 border-white shadow-lg z-20">
                 <span className="text-[10px] font-black italic text-white">VS</span>
               </div>
             </div>
 
-            {/* Match Score */}
-            <div className="mt-5 flex gap-2 text-xs font-mono font-bold text-gray-400 bg-black/40 px-2 py-0.5 rounded-full">
-              <span className="text-emerald-400">{p1?.matchWins || 0}</span>
-              <span>-</span>
-              <span className="text-rose-400">{p2?.matchWins || 0}</span>
+            {/* Match Score - Moved down slightly */}
+            <div className="mt-6 flex gap-3 text-xs font-mono font-bold text-gray-400 bg-black/60 px-3 py-1 rounded-full border border-white/5">
+              <span className="text-emerald-400 shadow-emerald-500/20 drop-shadow">{p1?.matchWins || 0}</span>
+              <span className="text-gray-600">|</span>
+              <span className="text-rose-400 shadow-rose-500/20 drop-shadow">{p2?.matchWins || 0}</span>
             </div>
           </div>
 
@@ -200,12 +203,13 @@ export function BattleArena({
 
       {/* ------------------------------------------------------------------
           MAIN GAME AREA
-          Flex column to distribute space
+          Flex column to distribute space. 
+          Reduced top padding and gaps to fix scroll issues.
          ------------------------------------------------------------------ */}
-      <div className="flex-1 flex flex-col pt-24 pb-4 px-4 w-full max-w-7xl mx-auto min-h-0">
+      <div className="flex-1 flex flex-col pt-20 pb-2 px-4 w-full max-w-7xl mx-auto min-h-0">
 
         {/* TOP SECTION: Opponent Hand */}
-        <div className="flex justify-center mb-4 transition-all duration-500 min-h-[60px]">
+        <div className="flex justify-center mb-2 transition-all duration-500 min-h-[50px] shrink-0">
           {p2 && (
             <div className="flex items-center gap-2">
               {/* Compact Hand Backs */}
@@ -219,7 +223,7 @@ export function BattleArena({
 
 
         {/* CENTER SECTION: Battle Zone */}
-        <div className="flex-1 flex items-center justify-center relative my-2">
+        <div className="flex-1 flex items-center justify-center relative my-1 min-h-[250px]">
 
           {/* Ability Trigger Notification (Floating) */}
           {abilityTriggered && (
@@ -235,7 +239,7 @@ export function BattleArena({
           )}
 
           {/* Battle Slots */}
-          <div className="grid grid-cols-2 gap-16 md:gap-32 w-full max-w-3xl items-center justify-items-center">
+          <div className="grid grid-cols-2 gap-8 md:gap-24 w-full max-w-3xl items-center justify-items-center">
 
             {/* OPPONENT SLOT */}
             <div className="flex flex-col items-center gap-2">
