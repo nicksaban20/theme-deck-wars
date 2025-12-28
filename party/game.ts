@@ -650,19 +650,9 @@ export default class GameServer implements Party.Server {
         }
       }
 
-      // Use speed order if available, otherwise use normal turn order
-      if (this.state.speedOrder && this.state.speedOrder.length === 2) {
-        this.state.currentTurn = this.state.speedOrder[0];
-        const speedCard = this.state.playedCards.find(pc =>
-          pc.playerId === this.state.speedOrder?.[0] &&
-          pc.round === this.state.round
-        )?.card;
-        const speed = speedCard ? getCardDefaults(speedCard).speed : 0;
-        this.state.message = `${this.state.players[this.state.speedOrder[0]]?.name}'s turn (speed: ${speed})`;
-      } else {
-        this.state.currentTurn = nextPlayerId;
-        this.state.message = `${nextPlayer?.name}'s turn`;
-      }
+      // Simple alternating turns - set next player's turn
+      this.state.currentTurn = nextPlayerId;
+      this.state.message = `${nextPlayer?.name}'s turn`;
     }
   }
 
