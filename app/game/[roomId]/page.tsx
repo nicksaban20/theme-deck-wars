@@ -370,9 +370,13 @@ export default function GamePage() {
         );
 
       default:
+        console.error('[Game] Unknown game phase:', gameState.phase, 'Full state:', gameState);
         return (
           <div className="h-screen w-screen overflow-hidden arena-bg flex items-center justify-center">
-            <p className="text-gray-400">Unknown game state</p>
+            <div className="text-center">
+              <p className="text-gray-400">Unknown game state: {gameState.phase || 'null'}</p>
+              <p className="text-gray-500 text-sm mt-2">Try refreshing the page or creating a new room</p>
+            </div>
           </div>
         );
     }
