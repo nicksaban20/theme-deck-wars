@@ -114,10 +114,13 @@ export function Card({
   useEffect(() => {
     // Use pre-generated imageUrl if available - INSTANT LOAD
     if (card.imageUrl) {
+      console.log(`[CardDebug] ${card.name}: Using pre-generated URL`);
       setImageUrl(card.imageUrl);
       setIsLoading(false);
       return;
     }
+
+    console.log(`[CardDebug] ${card.name}: No pre-gen URL. ArtStyle: ${artStyle}`);
 
     if (artStyle !== "ai" && artStyle !== "local-ai") {
       setImageUrl(null);
@@ -156,12 +159,14 @@ export function Card({
 
         const data = await response.json();
         if (data.imageUrl) {
+          console.log(`[CardDebug] ${card.name}: Generated successfully via API`);
           setImageUrl(data.imageUrl);
         } else {
+          console.error(`[CardDebug] ${card.name}: API returned no image`);
           setHasError(true);
         }
       } catch (error) {
-        console.error("Error fetching image:", error);
+        console.error(`[CardDebug] ${card.name}: Fetch error:`, error);
         // Fallback to local heuristic if available? No, just error state
         if (card.imageUrl) {
           setImageUrl(card.imageUrl);

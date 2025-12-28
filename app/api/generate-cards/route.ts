@@ -116,6 +116,8 @@ export async function POST(request: NextRequest) {
 
           // Generate images for cards that don't have them
           const cardsNeedingImages = cardsWithIds.filter(c => !c.imageUrl);
+          console.log(`[Cards Debug] Cache hit. Total: ${cardsWithIds.length}, Missing Images: ${cardsNeedingImages.length}`);
+
           if (cardsNeedingImages.length > 0) {
             console.log(`[Cards] Generating images for ${cardsNeedingImages.length} cached cards without images...`);
             cardsWithIds = await generateImagesForCards(cardsWithIds);
