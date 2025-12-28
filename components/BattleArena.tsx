@@ -57,8 +57,8 @@ export function BattleArena({
       </div>
 
       {/* TOP HUD - Fixed Height */}
-      <div className="shrink-0 z-30 p-2 md:p-3 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="max-w-6xl mx-auto flex items-start justify-between gap-2">
+      <div className="shrink-0 z-30 p-2 md:p-3 bg-gradient-to-b from-black/80 to-transparent w-full">
+        <div className="w-full px-4 flex items-start justify-between gap-2">
 
           {/* LEFT: Player 1 */}
           <div className="flex-1 flex flex-col items-start gap-1 max-w-[280px]">
@@ -132,7 +132,7 @@ export function BattleArena({
       </div>
 
       {/* MAIN GAME AREA */}
-      <div className="flex-1 flex flex-col items-center px-4 w-full max-w-5xl mx-auto min-h-0">
+      <div className="flex-1 flex flex-col items-center px-4 w-full min-h-0">
 
         {/* Opponent Hand - Compact */}
         <div className="flex justify-center py-1 shrink-0">
