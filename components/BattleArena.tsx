@@ -152,6 +152,17 @@ export function BattleArena({
         {/* Battle Zone */}
         <div className="flex-1 flex items-center justify-center relative min-h-0">
 
+          {/* Revealed Cards Notification (at start of battle) */}
+          {p1?.revealedCard && p2?.revealedCard && gameState.round === 1 && gameState.playedCards.filter(pc => pc.gameNumber === gameState.gameNumber).length === 0 && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50">
+              <div className="bg-violet-900/90 border border-violet-500/50 text-violet-100 px-4 py-2 rounded-lg text-sm shadow-lg">
+                <span className="font-bold">Revealed: </span>
+                <span className="text-violet-300">{p1.name}</span> → {p1.revealedCard.name} |
+                <span className="text-rose-300 ml-1">{p2.name}</span> → {p2.revealedCard.name}
+              </div>
+            </div>
+          )}
+
           {/* Ability Notification */}
           {abilityTriggered && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50">
