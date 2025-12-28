@@ -817,10 +817,15 @@ export default class GameServer implements Party.Server {
   }
 
   handleContinueMatch(conn: Party.Connection) {
+    console.log(`[Game] handleContinueMatch called by ${conn.id}, current phase: ${this.state.phase}`);
+
     if (this.state.phase !== "round-ended") {
+      console.log(`[Game] Cannot continue - phase is ${this.state.phase}, not round-ended`);
       this.sendError(conn, "Cannot continue match now");
       return;
     }
+
+    console.log(`[Game] Continuing match from round-ended phase...`);
 
     // Analyze previous game strategy for adaptive generation
     const players = Object.values(this.state.players);

@@ -13,14 +13,11 @@ interface RoundOverProps {
 export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }: RoundOverProps) {
   const [countdown, setCountdown] = useState(5);
   const hasContinuedRef = useRef(false);
-  
+
   const roundWinner = roundEnded?.winner ? gameState.players[roundEnded.winner] : null;
   const isWinner = roundEnded?.winner === currentPlayerId;
   const isTie = roundEnded?.winner === null;
   const players = Object.values(gameState.players);
-
-  // Check if this player is the first in order (only one player should trigger continue)
-  const isFirstPlayer = gameState.playerOrder[0] === currentPlayerId;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -35,13 +32,14 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
     return () => clearInterval(timer);
   }, []);
 
-  // Trigger continue when countdown reaches 0 (only first player does this)
+  // Trigger continue when countdown reaches 0 (any player can trigger this)
   useEffect(() => {
-    if (countdown === 0 && isFirstPlayer && !hasContinuedRef.current) {
+    if (countdown === 0 && !hasContinuedRef.current) {
       hasContinuedRef.current = true;
+      console.log('[RoundOver] Countdown reached 0, calling onContinue');
       onContinue();
     }
-  }, [countdown, isFirstPlayer, onContinue]);
+  }, [countdown, onContinue]);
 
   return (
     <div className="h-full arena-bg flex flex-col items-center justify-center p-8">
@@ -66,7 +64,7 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
           {isTie ? (
             <>
               <div className="text-5xl mb-4">🤝</div>
-              <h1 
+              <h1
                 className="text-4xl font-bold mb-2 text-gray-300"
                 style={{ fontFamily: "var(--font-display)" }}
               >
@@ -76,7 +74,7 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
           ) : isWinner ? (
             <>
               <div className="text-5xl mb-4">🎉</div>
-              <h1 
+              <h1
                 className="text-4xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"
                 style={{ fontFamily: "var(--font-display)" }}
               >
@@ -86,7 +84,7 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
           ) : (
             <>
               <div className="text-5xl mb-4">😤</div>
-              <h1 
+              <h1
                 className="text-4xl font-bold mb-2 text-gray-400"
                 style={{ fontFamily: "var(--font-display)" }}
               >
@@ -102,9 +100,8 @@ export function RoundOver({ gameState, currentPlayerId, roundEnded, onContinue }
           <div className="flex items-center justify-center gap-8">
             {players.map((player) => (
               <div key={player.id} className="text-center">
-                <p className={`font-semibold ${
-                  player.id === currentPlayerId ? "text-violet-400" : "text-rose-400"
-                }`}>
+                <p className={`font-semibold ${player.id === currentPlayerId ? "text-violet-400" : "text-rose-400"
+                  }`}>
                   {player.name}
                 </p>
                 <p className="text-5xl font-bold text-white">{player.matchWins}</p>

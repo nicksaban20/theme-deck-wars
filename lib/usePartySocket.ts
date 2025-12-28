@@ -233,6 +233,7 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
   }, [sendMessage]);
 
   const continueMatch = useCallback(() => {
+    console.log('[usePartySocket] continueMatch called, sending continue-match message');
     sendMessage({ type: "continue-match" });
     setRoundEnded(null);
   }, [sendMessage]);
