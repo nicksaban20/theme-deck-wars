@@ -24,16 +24,17 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
   }
 
   // Calculate overlap based on number of cards - less overlap for fewer cards
-  const getOverlap = () => {
-    if (cards.length <= 3) return 20; // Minimal overlap
-    if (cards.length <= 5) return 40; // Medium overlap
-    return 60; // More overlap for many cards
+  // Use positive gaps (no overlap) to ensure cards are visible
+  const getGap = () => {
+    if (cards.length <= 3) return 16; // 16px gap
+    if (cards.length <= 5) return 8;  // 8px gap
+    return 4; // Minimal gap for many cards
   };
 
-  const overlap = getOverlap();
+  const gap = getGap();
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {/* Hand label */}
       <div className="text-center mb-1">
         <span className="text-xs text-gray-500">
@@ -46,15 +47,15 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
         )}
       </div>
 
-      {/* Cards */}
-      <div className="flex justify-center items-end overflow-x-auto pb-1 px-2">
-        <div className="flex items-end" style={{ gap: `-${overlap}px` }}>
+      {/* Cards - no scroll, centered */}
+      <div className="flex justify-center items-end pb-2 px-4">
+        <div className="flex items-end justify-center" style={{ gap: `${gap}px` }}>
           {cards.map((card, index) => {
             // Subtle fan effect - less rotation for readability
             const rotation = cards.length > 1
-              ? (index - (cards.length - 1) / 2) * 3
+              ? (index - (cards.length - 1) / 2) * 2
               : 0;
-            const yOffset = Math.abs(index - (cards.length - 1) / 2) * 5;
+            const yOffset = Math.abs(index - (cards.length - 1) / 2) * 3;
 
             const canPlay = player && gameState ? canPlayCard(player, card, gameState) : true;
             const disableReason = !isCurrentTurn
@@ -66,18 +67,12 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
             return (
               <div
                 key={card.id}
-                className="transition-all duration-300 hover:!translate-y-[-30px] hover:!rotate-0 flex-shrink-0"
+                className="transition-all duration-300 hover:!translate-y-[-20px] hover:!rotate-0 hover:z-50"
                 style={{
                   transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
                   zIndex: index,
                 }}
                 title={disableReason}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.zIndex = '50';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.zIndex = String(index);
-                }}
               >
                 <CardWithArt
                   card={card}
