@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
         const cachedUrl = await getCachedImageUrl(normalizedPrompt);
         if (cachedUrl) {
           console.log(`[Image API] CACHE HIT! Returning cached image for: ${normalizedPrompt.slice(0, 30)}...`);
-          return NextResponse.json({ image: cachedUrl, cached: true });
+          return NextResponse.json({ imageUrl: cachedUrl, cached: true });
         }
         console.log(`[Image API] Cache MISS for: ${normalizedPrompt.slice(0, 30)}...`);
       } catch (error) {
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
 
     if (memoryCache.has(cacheKey)) {
       console.log(`[Image API] Memory cache hit for: ${cacheKey.slice(0, 30)}...`);
-      return NextResponse.json({ image: memoryCache.get(cacheKey), cached: true });
+      return NextResponse.json({ imageUrl: memoryCache.get(cacheKey), cached: true });
     }
 
     console.log(`[Image API] Generating image for: ${prompt.slice(0, 50)}... (artStyle: ${artStyle || 'default'})`);
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Direct URL - return it directly
-          return NextResponse.json({ image: ggufImage, cached: false, source: "gguf" });
+          return NextResponse.json({ imageUrl: ggufImage, cached: false, source: "gguf" });
         }
       }
     }
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
     }
     memoryCache.set(cacheKey, imageUrl);
 
-    return NextResponse.json({ image: imageUrl, cached: false, source: imageSource });
+    return NextResponse.json({ imageUrl: imageUrl, cached: false, source: imageSource });
   } catch (error) {
     console.error("[Image API] Error generating image:", error);
 
