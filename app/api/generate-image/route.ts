@@ -296,46 +296,33 @@ export async function POST(request: NextRequest) {
         console.error(`[Image API] Failed to cache URL in database:`, error);
       }
     }
-  } else {
-    // No Blob configured, use base64 data URL
-    imageUrl = `data:image/png;base64,${base64Image}`;
 
-    // Cache base64 URL in database if Postgres is available
-    if (POSTGRES_URL) {
-      try {
-        await cacheImageUrl(normalizedPrompt, imageUrl);
-        console.log(`[Image API] Cached base64 URL in database (Blob not configured)`);
-      } catch (error) {
-        console.error(`[Image API] Failed to cache base64 URL in database:`, error);
-      }
+
+    // Cache in memory as fallback
+    if (memoryCache.size >= MAX_CACHE_SIZE) {
+      const firstKey = memoryCache.keys().next().value;
+      if (firstKey) memoryCache.delete(firstKey);
     }
+    memoryCache.set(cacheKey, imageUrl);
+
+    return NextResponse.json({ image: imageUrl, cached: false, source: imageSource });
+  } catch (error) {
+    console.error("[Image API] Error generating image:", error);
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      console.error("[Image API] Error details:", error.message);
+    }
+
+    // Return error but don't crash - let client handle fallback
+    return NextResponse.json(
+      {
+        error: "Failed to generate image",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
   }
-
-  // Cache in memory as fallback
-  if (memoryCache.size >= MAX_CACHE_SIZE) {
-    const firstKey = memoryCache.keys().next().value;
-    if (firstKey) memoryCache.delete(firstKey);
-  }
-  memoryCache.set(cacheKey, imageUrl);
-
-  return NextResponse.json({ image: imageUrl, cached: false, source: imageSource });
-} catch (error) {
-  console.error("[Image API] Error generating image:", error);
-
-  // Provide more specific error messages
-  if (error instanceof Error) {
-    console.error("[Image API] Error details:", error.message);
-  }
-
-  // Return error but don't crash - let client handle fallback
-  return NextResponse.json(
-    {
-      error: "Failed to generate image",
-      message: error instanceof Error ? error.message : "Unknown error"
-    },
-    { status: 500 }
-  );
-}
 }
 
 // Also support GET for simple testing
