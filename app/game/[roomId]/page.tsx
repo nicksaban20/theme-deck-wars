@@ -46,6 +46,7 @@ export default function GamePage() {
     revealCard,
     toggleBlindDraft,
     playCard,
+    skipTurn,
     continueMatch,
     requestRematch,
     requestSwapRematch,
@@ -323,6 +324,7 @@ export default function GamePage() {
             gameState={gameState}
             currentPlayerId={connectionId}
             onPlayCard={playCard}
+            onSkipTurn={skipTurn}
             lastCardPlayed={lastCardPlayed}
             abilityTriggered={abilityTriggered}
             spectatorCount={spectatorCount}

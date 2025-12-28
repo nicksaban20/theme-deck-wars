@@ -118,7 +118,7 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
 
     socket.addEventListener("close", () => {
       setConnected(false);
-      
+
       // Attempt to reconnect if we haven't exceeded max attempts
       if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttemptsRef.current += 1;
@@ -212,6 +212,10 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
     [sendMessage]
   );
 
+  const skipTurn = useCallback(() => {
+    sendMessage({ type: "skip-turn" });
+  }, [sendMessage]);
+
   const requestRematch = useCallback(() => {
     sendMessage({ type: "request-rematch" });
     setRematchRequested(null);
@@ -253,6 +257,7 @@ export function usePartySocket(roomId: string | null, isSpectator: boolean = fal
     revealCard,
     toggleBlindDraft,
     playCard,
+    skipTurn,
     continueMatch,
     requestRematch,
     requestSwapRematch,

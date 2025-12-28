@@ -139,6 +139,7 @@ export type ClientMessage =
   | { type: 'draft-confirm' } // Confirm draft selection
   | { type: 'reveal-card'; cardId: string } // Select card to reveal
   | { type: 'play-card'; cardId: string }
+  | { type: 'skip-turn' } // Skip turn when can't play any card
   | { type: 'continue-match' } // Continue to next game in best-of-3
   | { type: 'request-rematch' } // Request a rematch
   | { type: 'request-swap-rematch' } // Request rematch with swapped themes

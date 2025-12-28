@@ -153,6 +153,9 @@ export default class GameServer implements Party.Server {
         case "toggle-blind-draft":
           this.handleToggleBlindDraft(sender);
           break;
+        case "skip-turn":
+          await this.handleSkipTurn(sender);
+          break;
         case "continue-match":
           this.handleContinueMatch(sender);
           break;
@@ -734,6 +737,83 @@ export default class GameServer implements Party.Server {
     this.state.blindDraft = !this.state.blindDraft;
     this.state.message = `Blind Draft Mode: ${this.state.blindDraft ? "ON" : "OFF"}`;
     console.log(`[Game] Blind Draft Toggled: ${this.state.blindDraft}`);
+  }
+
+  async handleSkipTurn(conn: Party.Connection) {
+    if (this.state.phase !== "battle") {
+      this.sendError(conn, "Cannot skip turn outside of battle phase");
+      return;
+    }
+
+    if (this.state.currentTurn !== conn.id) {
+      this.sendError(conn, "Not your turn!");
+      return;
+    }
+
+    const player = this.state.players[conn.id];
+    if (!player) {
+      this.sendError(conn, "Player not found");
+      return;
+    }
+
+    this.state.message = `${player.name} skipped their turn!`;
+
+    // Check if game should end
+    const { ended: gameEnded, winner: gameWinner } = checkGameEnd(this.state);
+    if (gameEnded) {
+      await this.handleGameEnd(gameWinner);
+      return;
+    }
+
+    // Move to next turn
+    const nextPlayerId = getNextTurn(this.state);
+
+    const cardsThisRound = this.state.playedCards.filter(
+      (pc) => pc.round === this.state.round && pc.gameNumber === this.state.gameNumber
+    ).length;
+
+    // If both players have had their turn (or skipped), advance round
+    // Note: we track this by checking if we're back to the first player
+    if (nextPlayerId === this.state.playerOrder[0] && cardsThisRound > 0) {
+      // Process status effects for all players
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        const { hpChange, effectsRemaining } = processStatusEffects(player);
+        player.hp += hpChange;
+        player.hp = Math.max(0, player.hp);
+        player.statusEffects = effectsRemaining;
+      }
+
+      this.state.round += 1;
+
+      // Update mana for new round
+      const roundMana = getRoundMana(this.state.round);
+      for (const playerId of Object.keys(this.state.players)) {
+        const player = this.state.players[playerId];
+        player.maxMana = roundMana;
+        player.mana = roundMana;
+      }
+
+      // Apply round modifier for new round
+      const modifier = getRoundModifier(this.state.round);
+      if (modifier) {
+        modifier.effect(this.state);
+        this.state.roundModifier = modifier.name;
+      }
+
+      const roundEndCheck = checkGameEnd(this.state);
+      if (roundEndCheck.ended) {
+        await this.handleGameEnd(roundEndCheck.winner);
+        return;
+      }
+    }
+
+    // Set next turn
+    if (nextPlayerId) {
+      const nextPlayer = this.state.players[nextPlayerId];
+      this.state.currentTurn = nextPlayerId;
+      this.state.message = `${player.name} skipped. ${nextPlayer?.name}'s turn!`;
+    }
   }
 
   handleContinueMatch(conn: Party.Connection) {

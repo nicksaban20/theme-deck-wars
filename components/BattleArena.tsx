@@ -3,11 +3,13 @@
 import { GameState, Card as CardType } from "@/lib/types";
 import { Hand } from "./Hand";
 import { CardWithArt } from "./CardWithArt";
+import { canPlayCard } from "@/lib/gameLogic";
 
 interface BattleArenaProps {
   gameState: GameState;
   currentPlayerId: string;
   onPlayCard: (cardId: string) => void;
+  onSkipTurn: () => void;
   lastCardPlayed: { playerId: string; card: CardType; damage: number } | null;
   abilityTriggered: { cardName: string; abilityText: string } | null;
   spectatorCount: number;
@@ -18,6 +20,7 @@ export function BattleArena({
   gameState,
   currentPlayerId,
   onPlayCard,
+  onSkipTurn,
   lastCardPlayed,
   abilityTriggered,
   spectatorCount,
@@ -206,6 +209,19 @@ export function BattleArena({
               player={p1}
               gameState={gameState}
             />
+            {/* Skip Turn Button - shows when it's player's turn and they can't afford any card */}
+            {isMyTurn && gameState.phase === "battle" && p1.cards.length > 0 && (
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={onSkipTurn}
+                  className="px-4 py-2 bg-gray-700/80 hover:bg-gray-600 border border-gray-500/50 
+                             text-gray-200 text-sm font-medium rounded-lg transition-all
+                             hover:border-gray-400/50 active:scale-95"
+                >
+                  ⏭️ Skip Turn
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
