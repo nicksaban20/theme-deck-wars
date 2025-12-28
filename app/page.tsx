@@ -59,7 +59,7 @@ export default function Home() {
           <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500 to-transparent" />
 
           {/* Name Input - Always visible first */}
-          <div className="mb-8">
+          <div className="mb-8 pt-2">
             <label className="block text-xs font-bold text-violet-300 uppercase tracking-wider mb-2 ml-1">
               Identify Yourself
             </label>
