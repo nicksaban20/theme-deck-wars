@@ -191,7 +191,7 @@ export function Card({
 
         const data = await response.json();
         if (data.imageUrl) {
-          console.log(`[CardDebug] ${card.name}: Generated successfully via API`);
+          console.log(`[CardDebug] ${card.name}: Generated successfully via API (Cached: ${data.cached ? 'YES' : 'NO'})`);
           setImageUrl(data.imageUrl);
         } else {
           console.error(`[CardDebug] ${card.name}: API returned no image`);
