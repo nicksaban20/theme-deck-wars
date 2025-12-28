@@ -144,6 +144,38 @@ export function Card({
     return () => clearTimeout(timeoutId);
 
     async function fetchImage() {
+      // 1. Try Direct Client-Side Fetch for Local AI (Bridging Cloud to Local)
+      if (artStyle === "local-ai") {
+        try {
+          console.log(`[CardDebug] Attempting Direct Local Fetch for ${card.name} (127.0.0.1:8080)`);
+          const localRes = await fetch("http://127.0.0.1:8080/v1/images/generations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: card.imagePrompt || `${card.name}, fantasy art`,
+              size: "256x256",
+              n: 1
+            })
+          });
+
+          if (localRes.ok) {
+            const localData = await localRes.json();
+            const b64 = localData.data?.[0]?.b64_json;
+            if (b64) {
+              const fullUrl = `data:image/png;base64,${b64}`;
+              console.log(`[CardDebug] Direct Local Fetch Success!`);
+              setImageUrl(fullUrl);
+              setIsLoading(false);
+              return; // Success! Skip server fetch
+            }
+          }
+        } catch (localErr) {
+          console.warn(`[CardDebug] Direct Local Fetch Failed (Mixed Content or CORS):`, localErr);
+          // Continue to server fetch fallthrough
+        }
+      }
+
+      // 2. Server API Fetch (Cloudflare or Server-Side Local)
       try {
         const response = await fetch("/api/generate-image", {
           method: "POST",
