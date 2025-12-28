@@ -63,6 +63,7 @@ export function createPlayer(id: string, name: string): Player {
     revealedCard: null,
     isRevealReady: false,
     hp: STARTING_HP,
+    maxHp: STARTING_HP,
     mana: STARTING_MANA,
     maxMana: STARTING_MANA,
     isReady: false,
@@ -84,6 +85,7 @@ export function resetPlayerForNewGame(player: Player): Player {
     revealedCard: null,
     isRevealReady: false,
     hp: STARTING_HP,
+    maxHp: STARTING_HP,
     mana: STARTING_MANA,
     maxMana: STARTING_MANA,
     isReady: true, // Keep ready since they're in a match
@@ -115,12 +117,12 @@ export function resetStateForNewGame(state: GameState): GameState {
 export function resetStateForRematch(state: GameState, swapThemes: boolean): GameState {
   const players = Object.values(state.players);
   const newPlayers: Record<string, Player> = {};
-  
+
   for (const player of players) {
-    const newTheme = swapThemes 
+    const newTheme = swapThemes
       ? (players.find(p => p.id !== player.id)?.originalTheme || player.theme)
       : player.originalTheme;
-    
+
     newPlayers[player.id] = {
       ...createPlayer(player.id, player.name),
       theme: newTheme,
@@ -128,7 +130,7 @@ export function resetStateForRematch(state: GameState, swapThemes: boolean): Gam
       isReady: true,
     };
   }
-  
+
   return {
     ...createInitialState(state.roomId),
     players: newPlayers,
@@ -180,7 +182,7 @@ export function calculateDamage(
 
   // Bonus damage based on HP conditions
   if (ability.includes('low hp') || ability.includes('below half')) {
-    const attacker = Object.values(gameState.players).find(p => 
+    const attacker = Object.values(gameState.players).find(p =>
       p.cards.some(c => c.id === attackingCard.id)
     );
     if (attacker && attacker.hp <= STARTING_HP / 2) {
@@ -212,7 +214,7 @@ export function getLastPlayedCard(
   const opponentCards = gameState.playedCards
     .filter(pc => pc.playerId !== excludePlayerId && pc.gameNumber === gameState.gameNumber)
     .sort((a, b) => b.round - a.round);
-  
+
   return opponentCards[0]?.card || null;
 }
 
@@ -262,7 +264,7 @@ export function checkMatchEnd(gameState: GameState): { ended: boolean; winner: s
  */
 export function getNextTurn(gameState: GameState): string | null {
   if (gameState.playerOrder.length < 2) return null;
-  
+
   const currentIndex = gameState.playerOrder.indexOf(gameState.currentTurn || '');
   const nextIndex = (currentIndex + 1) % gameState.playerOrder.length;
   return gameState.playerOrder[nextIndex];
@@ -309,13 +311,13 @@ export function canPlayCard(player: Player, card: Card, gameState: GameState): b
 export function getEffectiveManaCost(card: Card, gameState: GameState): number {
   const cardWithDefaults = getCardDefaults(card);
   let effectiveCost = cardWithDefaults.manaCost;
-  
+
   // Apply round modifier (Mana Surge: -1 mana cost)
   const roundModifier = getRoundModifier(gameState.round);
   if (roundModifier && roundModifier.name === "Mana Surge") {
     effectiveCost = Math.max(1, effectiveCost - 1);
   }
-  
+
   return effectiveCost;
 }
 
@@ -368,30 +370,30 @@ export function getCardSynergies(card: Card, player: Player): {
 } {
   const synergies: string[] = [];
   const synergyCards: Card[] = [];
-  
+
   const allPlayerCards = [...player.draftedCards, ...player.cards];
   const cardWithDefaults = getCardDefaults(card);
-  
+
   // Check combo perks
   const comboPerks = cardWithDefaults.perks?.combo || [];
   for (const perk of comboPerks) {
     if (Array.isArray(perk.synergyWith)) {
       for (const synergyName of perk.synergyWith) {
-        const hasSynergy = allPlayerCards.some(c => 
+        const hasSynergy = allPlayerCards.some(c =>
           c.name.toLowerCase() === synergyName.toLowerCase()
         );
         if (hasSynergy) {
           synergies.push(`Synergizes with ${synergyName}`);
-          const synergyCard = allPlayerCards.find(c => 
+          const synergyCard = allPlayerCards.find(c =>
             c.name.toLowerCase() === synergyName.toLowerCase()
           );
           if (synergyCard) synergyCards.push(synergyCard);
         }
       }
     }
-    
+
     if (Array.isArray(perk.requiresColor)) {
-      const hasColor = allPlayerCards.some(c => 
+      const hasColor = allPlayerCards.some(c =>
         perk.requiresColor?.includes(c.color)
       );
       if (hasColor) {
@@ -399,7 +401,7 @@ export function getCardSynergies(card: Card, player: Player): {
       }
     }
   }
-  
+
   return { synergies, synergyCards };
 }
 
@@ -459,11 +461,11 @@ export function evaluateTriggeredPerks(
   gameState: GameState
 ): { effect: string; value: number } | null {
   const perks = card.perks?.triggered || [];
-  
+
   if (!Array.isArray(perks)) {
     return null;
   }
-  
+
   for (const perk of perks) {
     if (!perk || typeof perk !== 'object' || !('type' in perk) || perk.type !== trigger) {
       continue;
@@ -492,11 +494,11 @@ export function evaluateComboPerks(
   gameState: GameState
 ): { effect: string; value: number } | null {
   const perks = card.perks?.combo || [];
-  
+
   if (!Array.isArray(perks)) {
     return null;
   }
-  
+
   for (const perk of perks) {
     if (!perk || typeof perk !== 'object' || !('comboEffect' in perk)) {
       continue;
@@ -509,11 +511,11 @@ export function evaluateComboPerks(
       const playedCardNames = gameState.playedCards
         .filter(pc => pc.playerId === player.id && pc.gameNumber === gameState.gameNumber)
         .map(pc => pc.card.name.toLowerCase());
-      
-      const synergyCount = perk.synergyWith.filter((name: unknown) => 
+
+      const synergyCount = perk.synergyWith.filter((name: unknown) =>
         typeof name === 'string' && playedCardNames.includes(name.toLowerCase())
       ).length;
-      
+
       comboTriggered = synergyCount >= perk.synergyWith.length;
     }
 
@@ -522,11 +524,11 @@ export function evaluateComboPerks(
       const playedCardColors = gameState.playedCards
         .filter(pc => pc.playerId === player.id && pc.gameNumber === gameState.gameNumber)
         .map(pc => pc.card.color);
-      
-      const colorMatch = perk.requiresColor.some((color: unknown) => 
+
+      const colorMatch = perk.requiresColor.some((color: unknown) =>
         typeof color === 'string' && playedCardColors.includes(color as CardColor)
       );
-      
+
       comboTriggered = comboTriggered || colorMatch;
     }
 
@@ -698,7 +700,7 @@ export function calculateDamageWithPerks(
 
   // Get round modifier for applying stat bonuses
   const roundModifier = getRoundModifier(gameState.round);
-  
+
   // Apply round modifiers to base attack
   if (roundModifier) {
     if (roundModifier.name === "Power Play") baseDamage += 1;
@@ -713,13 +715,13 @@ export function calculateDamageWithPerks(
   if (defendingCard) {
     const defendingCardDefaults = getCardDefaults(defendingCard);
     let effectiveDefense = defendingCardDefaults.defense;
-    
+
     // Apply round modifiers to defense
     if (roundModifier && roundModifier.name === "Defensive Stance") {
       // Defensive Stance: +1 defense
       effectiveDefense += 1;
     }
-    
+
     const defendingPassive = evaluatePassivePerks(defendingCardDefaults, defender, gameState);
     effectiveDefense += defendingPassive.damageReduction;
     baseDamage = Math.max(0, baseDamage - effectiveDefense);

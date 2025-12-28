@@ -70,6 +70,7 @@ export interface Player {
   revealedCard: Card | null; // Card revealed in reveal phase
   isRevealReady: boolean; // Has selected card to reveal
   hp: number;
+  maxHp: number; // Maximum HP (usually 20)
   mana: number; // Current mana pool
   maxMana: number; // Maximum mana (increases per turn)
   isReady: boolean;
