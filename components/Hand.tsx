@@ -84,8 +84,8 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
                   onClick={onPlayCard ? () => onPlayCard(card.id) : undefined}
                   isPlayable={isCurrentTurn && !disabled && canPlay}
                   disabled={disabled || !isCurrentTurn || !canPlay}
-                  size="md"
-                  showAbility={true}
+                  size="sm"
+                  showAbility={false}
                 />
               </div>
             );

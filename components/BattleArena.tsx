@@ -49,7 +49,7 @@ export function BattleArena({
   };
 
   return (
-    <div className="h-full w-full overflow-hidden arena-bg flex flex-col relative">
+    <div className="h-full w-full overflow-hidden arena-bg flex flex-col items-center relative">
       {/* Decorative Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-900/10 blur-[80px]" />
@@ -132,7 +132,7 @@ export function BattleArena({
       </div>
 
       {/* MAIN GAME AREA */}
-      <div className="flex-1 flex flex-col px-4 w-full max-w-6xl mx-auto min-h-0">
+      <div className="flex-1 flex flex-col items-center px-4 w-full max-w-5xl mx-auto min-h-0">
 
         {/* Opponent Hand - Compact */}
         <div className="flex justify-center py-1 shrink-0">
@@ -160,17 +160,17 @@ export function BattleArena({
           )}
 
           {/* Battle Slots with VS */}
-          <div className="flex items-center justify-center gap-4 md:gap-8">
+          <div className="flex items-center justify-center gap-6 md:gap-12">
 
             {/* Opponent Slot */}
             <div className="flex flex-col items-center">
               {opponentLastPlayedCard ? (
-                <div className="animate-slide-down transform scale-90 md:scale-100">
-                  <CardWithArt card={opponentLastPlayedCard} size="sm" />
+                <div className="animate-slide-down">
+                  <CardWithArt card={opponentLastPlayedCard} size="md" showAbility={false} />
                 </div>
               ) : (
-                <div className="w-[120px] h-[168px] md:w-[140px] md:h-[196px] rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center">
-                  <span className="text-white/20 text-2xl">?</span>
+                <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center">
+                  <span className="text-white/20 text-3xl">?</span>
                 </div>
               )}
             </div>
@@ -183,12 +183,12 @@ export function BattleArena({
             {/* Player Slot */}
             <div className="flex flex-col items-center">
               {myLastPlayedCard ? (
-                <div className="animate-slide-up transform scale-90 md:scale-100">
-                  <CardWithArt card={myLastPlayedCard} size="sm" />
+                <div className="animate-slide-up">
+                  <CardWithArt card={myLastPlayedCard} size="md" showAbility={false} />
                 </div>
               ) : (
-                <div className="w-[120px] h-[168px] md:w-[140px] md:h-[196px] rounded-xl border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center">
-                  <span className="text-xs text-gray-500 uppercase">You</span>
+                <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center">
+                  <span className="text-sm text-gray-500 uppercase">You</span>
                 </div>
               )}
             </div>

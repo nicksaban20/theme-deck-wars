@@ -44,7 +44,7 @@ export function DraftPhase({
         <div className="absolute bg-violet-600/10 w-[400px] h-[400px] rounded-full blur-[100px] bottom-[-100px] right-[-100px]" />
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full p-4 min-h-0">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-start max-w-5xl mx-auto w-full p-4 min-h-0">
         {/* Header - Compact */}
         <div className="text-center mb-4 shrink-0">
           <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-white to-violet-300"

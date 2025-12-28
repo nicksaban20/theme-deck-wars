@@ -60,7 +60,7 @@ export default function Home() {
 
           {/* Name Input - Always visible first */}
           <div className="mb-8 pt-2">
-            <label className="block text-xs font-bold text-violet-300 uppercase tracking-wider mb-2 ml-1">
+            <label className="block text-xs font-bold text-violet-300 uppercase tracking-wider mb-2 text-center">
               Identify Yourself
             </label>
             <div className="relative group">
