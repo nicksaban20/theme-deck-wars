@@ -77,9 +77,9 @@ export default class GameServer implements Party.Server {
   }
 
   broadcastSpectatorCount() {
-    const message: ServerMessage = { 
-      type: "spectator-count", 
-      count: this.state.spectators.length 
+    const message: ServerMessage = {
+      type: "spectator-count",
+      count: this.state.spectators.length
     };
     this.room.broadcast(JSON.stringify(message));
   }
@@ -102,11 +102,11 @@ export default class GameServer implements Party.Server {
   onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
     const message: ServerMessage = { type: "state", state: this.state };
     conn.send(JSON.stringify(message));
-    
+
     // Send spectator count
-    const spectatorMsg: ServerMessage = { 
-      type: "spectator-count", 
-      count: this.state.spectators.length 
+    const spectatorMsg: ServerMessage = {
+      type: "spectator-count",
+      count: this.state.spectators.length
     };
     conn.send(JSON.stringify(spectatorMsg));
   }
@@ -189,7 +189,7 @@ export default class GameServer implements Party.Server {
       const sanitizedName = (playerName || `Player ${Object.keys(this.state.players).length + 1}`)
         .trim()
         .slice(0, 50); // Limit length
-      
+
       if (!sanitizedName) {
         this.sendError(conn, "Player name cannot be empty");
         return;
@@ -377,7 +377,7 @@ export default class GameServer implements Party.Server {
       // Transition to reveal phase
       this.state.phase = "reveal";
       this.state.message = "Select a card to reveal to your opponent...";
-      
+
       // Reset reveal state
       for (const playerId of Object.keys(this.state.players)) {
         const player = this.state.players[playerId];
@@ -421,10 +421,10 @@ export default class GameServer implements Party.Server {
     if (allRevealReady) {
       // Both revealed, show reveals and start battle
       const players = Object.values(this.state.players);
-      const revealMessage = players.map(p => 
+      const revealMessage = players.map(p =>
         `${p.name} revealed: ${p.revealedCard?.name || 'Unknown'}`
       ).join(' | ');
-      
+
       this.state.phase = "battle";
       // Initialize mana for battle start (round-based scaling)
       const roundMana = getRoundMana(this.state.round);
@@ -433,18 +433,18 @@ export default class GameServer implements Party.Server {
         player.mana = roundMana;
         player.maxMana = roundMana;
       }
-      
+
       // Apply round modifier
       const modifier = getRoundModifier(this.state.round);
       if (modifier) {
         modifier.effect(this.state);
         this.state.roundModifier = modifier.name;
       }
-      
+
       this.state.currentTurn = this.state.playerOrder[0];
       const firstPlayer = this.state.players[this.state.playerOrder[0]];
       this.state.message = `${revealMessage}. Battle begins! ${firstPlayer?.name}'s turn`;
-      
+
       // Record game start in history (only for first game of match)
       if (this.state.gameNumber === 1 && !this.gameHistoryRecorded) {
         this.gameHistoryRecorded = true;
@@ -554,7 +554,7 @@ export default class GameServer implements Party.Server {
       const player2Card = this.state.playedCards
         .filter(pc => pc.playerId === opponentId && pc.round === this.state.round)
         .map(pc => pc.card)[0] || null;
-      
+
       this.state.speedOrder = calculateSpeedOrder(this.state, player1Card, player2Card);
     }
 
@@ -586,11 +586,11 @@ export default class GameServer implements Party.Server {
 
     // Move to next turn
     const nextPlayerId = getNextTurn(this.state);
-    
+
     const cardsThisRound = this.state.playedCards.filter(
       (pc) => pc.round === this.state.round && pc.gameNumber === this.state.gameNumber
     ).length;
-    
+
     if (cardsThisRound >= 2) {
       // Both players played, process end of round
       // Process status effects for all players
@@ -601,9 +601,9 @@ export default class GameServer implements Party.Server {
         player.hp = Math.max(0, player.hp); // Don't go below 0
         player.statusEffects = effectsRemaining;
       }
-      
+
       this.state.round += 1;
-      
+
       // Update mana for new round (round-based scaling)
       const roundMana = getRoundMana(this.state.round);
       for (const playerId of Object.keys(this.state.players)) {
@@ -611,14 +611,14 @@ export default class GameServer implements Party.Server {
         player.maxMana = roundMana;
         player.mana = roundMana; // Refill to round max
       }
-      
+
       // Apply round modifier for new round
       const modifier = getRoundModifier(this.state.round);
       if (modifier) {
         modifier.effect(this.state);
         this.state.roundModifier = modifier.name;
       }
-      
+
       const roundEndCheck = checkGameEnd(this.state);
       if (roundEndCheck.ended) {
         await this.handleGameEnd(roundEndCheck.winner);
@@ -629,12 +629,12 @@ export default class GameServer implements Party.Server {
     // Set next turn
     if (nextPlayerId) {
       const nextPlayer = this.state.players[nextPlayerId];
-      
+
       // Use speed order if available, otherwise use normal turn order
       if (this.state.speedOrder && this.state.speedOrder.length === 2) {
         this.state.currentTurn = this.state.speedOrder[0];
-        const speedCard = this.state.playedCards.find(pc => 
-          pc.playerId === this.state.speedOrder?.[0] && 
+        const speedCard = this.state.playedCards.find(pc =>
+          pc.playerId === this.state.speedOrder?.[0] &&
           pc.round === this.state.round
         )?.card;
         const speed = speedCard ? getCardDefaults(speedCard).speed : 0;
@@ -648,7 +648,7 @@ export default class GameServer implements Party.Server {
 
   async handleGameEnd(winner: string | null) {
     this.state.roundWinner = winner;
-    
+
     // Record game in history
     const players = Object.values(this.state.players);
     this.state.gameHistory.push({
@@ -665,11 +665,11 @@ export default class GameServer implements Party.Server {
 
     // Check if match is over
     const { ended: matchEnded, winner: matchWinner } = checkMatchEnd(this.state);
-    
+
     if (matchEnded) {
       this.state.phase = "match-ended";
       this.state.matchWinner = matchWinner;
-      
+
       let winnerName: string | null = null;
       if (matchWinner) {
         const winnerPlayer = this.state.players[matchWinner];
@@ -678,33 +678,32 @@ export default class GameServer implements Party.Server {
       } else {
         this.state.message = "Match ended in a tie!";
       }
-      
+
       // Record match end in history
       this.recordGameHistory("end", {
         roomId: this.state.roomId,
         winnerName,
         matchScore: this.getScoreString(),
       });
-      
+
       const matchEndedMsg: ServerMessage = { type: "match-ended", winner: matchWinner };
       this.room.broadcast(JSON.stringify(matchEndedMsg));
     } else {
       // More games to play
       this.state.phase = "round-ended";
       const winnerPlayer = winner ? this.state.players[winner] : null;
-      this.state.message = winnerPlayer 
+      this.state.message = winnerPlayer
         ? `${winnerPlayer.name} wins Game ${this.state.gameNumber}! Score: ${this.getScoreString()}`
         : `Game ${this.state.gameNumber} is a tie! Score: ${this.getScoreString()}`;
-      
-      const roundEndedMsg: ServerMessage = { 
-        type: "round-ended", 
-        winner, 
-        gameNumber: this.state.gameNumber 
+
+      const roundEndedMsg: ServerMessage = {
+        type: "round-ended",
+        winner,
+        gameNumber: this.state.gameNumber
       };
       this.room.broadcast(JSON.stringify(roundEndedMsg));
-      
-      // Auto-start next game after a delay (handled by client)
-      this.state.gameNumber += 1;
+
+      // Note: gameNumber is incremented in handleContinueMatch when players are ready to continue
     }
   }
 
@@ -746,19 +745,19 @@ export default class GameServer implements Party.Server {
     // Analyze previous game strategy for adaptive generation
     const players = Object.values(this.state.players);
     const lastGame = this.state.gameHistory[this.state.gameHistory.length - 1];
-    
+
     // Determine strategies based on cards played
     const strategies: Record<string, string> = {};
     for (const player of players) {
       const playedCards = this.state.playedCards.filter(
         pc => pc.playerId === player.id && pc.gameNumber === this.state.gameNumber
       );
-      
+
       if (playedCards.length > 0) {
         const avgAttack = playedCards.reduce((sum, pc) => sum + pc.card.attack, 0) / playedCards.length;
         const avgDefense = playedCards.reduce((sum, pc) => sum + pc.card.defense, 0) / playedCards.length;
         const avgMana = playedCards.reduce((sum, pc) => sum + getCardDefaults(pc.card).manaCost, 0) / playedCards.length;
-        
+
         if (avgAttack > avgDefense + 1) {
           strategies[player.id] = "aggressive high-attack";
         } else if (avgDefense > avgAttack + 1) {
@@ -810,7 +809,7 @@ export default class GameServer implements Party.Server {
     this.state.currentTurn = null;
     this.state.roundModifier = null;
     this.state.message = `Game ${this.state.gameNumber} - Generating new cards...`;
-    
+
     console.log(`[Game] Continuing to game ${this.state.gameNumber}, phase: ${this.state.phase}`);
   }
 
@@ -865,11 +864,11 @@ export default class GameServer implements Party.Server {
   startRematch() {
     // Determine if swapping themes
     const swapThemes = Array.from(this.rematchRequests.values()).some(r => r.swapThemes);
-    
+
     this.state = resetStateForRematch(this.state, swapThemes);
     this.gameHistoryRecorded = false; // Reset for new match
     this.rematchRequests.clear();
-    
+
     this.broadcastState();
   }
 
@@ -932,7 +931,7 @@ export default class GameServer implements Party.Server {
         }
 
         await this.saveState();
-        
+
         return new Response(JSON.stringify({ success: true, allHaveCards }), {
           headers: { "Content-Type": "application/json" },
         });
