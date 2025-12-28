@@ -311,6 +311,23 @@ export default function GamePage() {
           />
         );
 
+      case "reveal":
+        if (!connectionId || !currentPlayer) {
+          return (
+            <div className="h-full arena-bg flex items-center justify-center">
+              <p className="text-gray-400">Preparing reveal phase...</p>
+            </div>
+          );
+        }
+        return (
+          <RevealPhase
+            currentPlayer={currentPlayer}
+            opponent={opponent || null}
+            onRevealCard={revealCard}
+            blindDraft={gameState.blindDraft || false}
+          />
+        );
+
       case "battle":
         if (!connectionId) {
           return (
