@@ -62,9 +62,9 @@ const colorClasses: Record<CardColor, { gradient: string; glow: string; accent: 
 };
 
 const sizeClasses = {
-  sm: "w-32 h-44",
-  md: "w-44 h-60",
-  lg: "w-56 h-76",
+  sm: "w-28 h-40 md:w-32 md:h-44",
+  md: "w-36 h-52 md:w-44 md:h-60",
+  lg: "w-48 h-64 md:w-56 md:h-76",
 };
 
 const rarityColors = {

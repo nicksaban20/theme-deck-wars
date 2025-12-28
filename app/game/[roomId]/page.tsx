@@ -258,7 +258,7 @@ export default function GamePage() {
       case "theme-select":
         if (isActualSpectator) {
           return (
-            <div className="min-h-screen arena-bg flex items-center justify-center p-8">
+            <div className="h-full arena-bg flex items-center justify-center p-8">
               <div className="text-center">
                 <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
                   👁️ Spectating
@@ -288,7 +288,7 @@ export default function GamePage() {
       case "drafting":
         if (isActualSpectator) {
           return (
-            <div className="min-h-screen arena-bg flex items-center justify-center p-8">
+            <div className="h-full arena-bg flex items-center justify-center p-8">
               <div className="text-center">
                 <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-500/40 rounded-full text-violet-400">
                   👁️ Spectating
@@ -313,7 +313,7 @@ export default function GamePage() {
       case "battle":
         if (!connectionId) {
           return (
-            <div className="min-h-screen arena-bg flex items-center justify-center">
+            <div className="h-full arena-bg flex items-center justify-center">
               <p className="text-gray-400">Joining battle...</p>
             </div>
           );
@@ -333,7 +333,7 @@ export default function GamePage() {
       case "round-ended":
         if (!connectionId) {
           return (
-            <div className="min-h-screen arena-bg flex items-center justify-center">
+            <div className="h-full arena-bg flex items-center justify-center">
               <p className="text-gray-400">Loading...</p>
             </div>
           );

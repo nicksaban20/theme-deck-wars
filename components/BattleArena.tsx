@@ -160,7 +160,7 @@ export function BattleArena({
           )}
 
           {/* Battle Slots with VS */}
-          <div className="flex items-center justify-center gap-6 md:gap-12">
+          <div className="flex items-center justify-center gap-4 md:gap-8">
 
             {/* Opponent Slot */}
             <div className="flex flex-col items-center">
@@ -169,15 +169,15 @@ export function BattleArena({
                   <CardWithArt card={opponentLastPlayedCard} size="md" showAbility={false} />
                 </div>
               ) : (
-                <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center">
+                <div className="w-32 h-44 md:w-40 md:h-56 rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center">
                   <span className="text-white/20 text-3xl">?</span>
                 </div>
               )}
             </div>
 
             {/* VS Badge - Now between slots, not on round */}
-            <div className="w-12 h-12 bg-gradient-to-br from-rose-600 to-purple-700 rounded-full flex items-center justify-center shadow-lg border-2 border-white/30">
-              <span className="text-xs font-black italic text-white">VS</span>
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-rose-600 to-purple-700 rounded-full flex items-center justify-center shadow-lg border-2 border-white/30">
+              <span className="text-[10px] md:text-xs font-black italic text-white">VS</span>
             </div>
 
             {/* Player Slot */}
@@ -187,7 +187,7 @@ export function BattleArena({
                   <CardWithArt card={myLastPlayedCard} size="md" showAbility={false} />
                 </div>
               ) : (
-                <div className="w-44 h-60 rounded-xl border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center">
+                <div className="w-32 h-44 md:w-40 md:h-56 rounded-xl border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center">
                   <span className="text-sm text-gray-500 uppercase">You</span>
                 </div>
               )}

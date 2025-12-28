@@ -44,7 +44,7 @@ export function DraftPhase({
         <div className="absolute bg-violet-600/10 w-[400px] h-[400px] rounded-full blur-[100px] bottom-[-100px] right-[-100px]" />
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-start max-w-5xl mx-auto w-full p-4 min-h-0">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full p-4 min-h-0">
         {/* Header - Compact */}
         <div className="text-center mb-4 shrink-0">
           <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-white to-violet-300"
@@ -71,8 +71,8 @@ export function DraftPhase({
         </div>
 
         {/* Selected Deck - Compact */}
-        <div className="mb-4 shrink-0">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mb-4 shrink-0 w-full max-w-3xl">
+          <div className="flex items-center justify-center gap-4 mb-2">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider">Your Deck</h2>
             {canConfirm && !currentPlayer.isDraftReady && (
               <button
@@ -121,8 +121,8 @@ export function DraftPhase({
 
         {/* Available Pool - Scrollable */}
         {!currentPlayer.isDraftReady && poolCount > 0 && (
-          <div className="flex-1 min-h-0 flex flex-col">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-2 shrink-0">
+          <div className="flex-1 min-h-0 flex flex-col items-center w-full max-w-4xl">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-2 shrink-0 text-center">
               Available ({poolCount})
             </h2>
 
