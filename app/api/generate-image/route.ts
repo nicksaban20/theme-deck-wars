@@ -267,80 +267,71 @@ export async function POST(request: NextRequest) {
     console.log(`[Image API] Successfully generated image via ${imageSource}`);
 
     // Try to upload to Vercel Blob for persistent storage
-    let imageUrl: string;
+    // Default to base64 Data URL (always works)
+    let imageUrl = `data:image/png;base64,${base64Image}`;
 
+    // Try to upload to Vercel Blob for persistent storage if configured
     if (isBlobConfigured()) {
       const imageBuffer = base64ToBuffer(base64Image);
       const blobUrl = await uploadImageToBlob(imageBuffer, normalizedPrompt);
 
       if (blobUrl) {
         imageUrl = blobUrl;
-
-        // Cache URL in database
-        if (POSTGRES_URL) {
-          try {
-            await cacheImageUrl(normalizedPrompt, blobUrl);
-            console.log(`[Image API] Cached Blob URL in database`);
-          } catch (error) {
-            console.error(`[Image API] Failed to cache Blob URL in database:`, error);
-          }
-        }
-
         console.log(`[Image API] Stored image in Vercel Blob: ${blobUrl}`);
       } else {
-        // Fall back to base64 data URL
-        imageUrl = `data:image/png;base64,${base64Image}`;
-
-        // Still cache base64 URL in database if Postgres is available
-        if (POSTGRES_URL) {
-          try {
-            await cacheImageUrl(normalizedPrompt, imageUrl);
-            console.log(`[Image API] Cached base64 URL in database (Blob upload failed)`);
-          } catch (error) {
-            console.error(`[Image API] Failed to cache base64 URL in database:`, error);
-          }
-        }
-      }
-    } else {
-      // No Blob configured, use base64 data URL
-      imageUrl = `data:image/png;base64,${base64Image}`;
-
-      // Cache base64 URL in database if Postgres is available
-      if (POSTGRES_URL) {
-        try {
-          await cacheImageUrl(normalizedPrompt, imageUrl);
-          console.log(`[Image API] Cached base64 URL in database (Blob not configured)`);
-        } catch (error) {
-          console.error(`[Image API] Failed to cache base64 URL in database:`, error);
-        }
+        console.warn(`[Image API] Blob upload failed, using Data URI`);
       }
     }
 
-    // Cache in memory as fallback
-    if (memoryCache.size >= MAX_CACHE_SIZE) {
-      const firstKey = memoryCache.keys().next().value;
-      if (firstKey) memoryCache.delete(firstKey);
+    // Cache the final URL in database if Postgres is available
+    if (POSTGRES_URL) {
+      try {
+        await cacheImageUrl(normalizedPrompt, imageUrl);
+        console.log(`[Image API] Cached URL in database`);
+      } catch (error) {
+        console.error(`[Image API] Failed to cache URL in database:`, error);
+      }
     }
-    memoryCache.set(cacheKey, imageUrl);
+  } else {
+    // No Blob configured, use base64 data URL
+    imageUrl = `data:image/png;base64,${base64Image}`;
 
-    return NextResponse.json({ image: imageUrl, cached: false, source: imageSource });
-  } catch (error) {
-    console.error("[Image API] Error generating image:", error);
-
-    // Provide more specific error messages
-    if (error instanceof Error) {
-      console.error("[Image API] Error details:", error.message);
+    // Cache base64 URL in database if Postgres is available
+    if (POSTGRES_URL) {
+      try {
+        await cacheImageUrl(normalizedPrompt, imageUrl);
+        console.log(`[Image API] Cached base64 URL in database (Blob not configured)`);
+      } catch (error) {
+        console.error(`[Image API] Failed to cache base64 URL in database:`, error);
+      }
     }
-
-    // Return error but don't crash - let client handle fallback
-    return NextResponse.json(
-      {
-        error: "Failed to generate image",
-        message: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 500 }
-    );
   }
+
+  // Cache in memory as fallback
+  if (memoryCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = memoryCache.keys().next().value;
+    if (firstKey) memoryCache.delete(firstKey);
+  }
+  memoryCache.set(cacheKey, imageUrl);
+
+  return NextResponse.json({ image: imageUrl, cached: false, source: imageSource });
+} catch (error) {
+  console.error("[Image API] Error generating image:", error);
+
+  // Provide more specific error messages
+  if (error instanceof Error) {
+    console.error("[Image API] Error details:", error.message);
+  }
+
+  // Return error but don't crash - let client handle fallback
+  return NextResponse.json(
+    {
+      error: "Failed to generate image",
+      message: error instanceof Error ? error.message : "Unknown error"
+    },
+    { status: 500 }
+  );
+}
 }
 
 // Also support GET for simple testing
