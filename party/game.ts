@@ -633,6 +633,23 @@ export default class GameServer implements Party.Server {
     if (nextPlayerId) {
       const nextPlayer = this.state.players[nextPlayerId];
 
+      // Check if next player has no cards - if so, check game end
+      if (nextPlayer && nextPlayer.cards.length === 0) {
+        // Check if game should end (both players out of cards or one player at 0 HP)
+        const { ended: gameEnded, winner: gameWinner } = checkGameEnd(this.state);
+        if (gameEnded) {
+          await this.handleGameEnd(gameWinner);
+          return;
+        }
+        // If game shouldn't end but player has no cards, skip to other player
+        const otherPlayerId = getNextTurn(this.state);
+        if (otherPlayerId && otherPlayerId !== nextPlayerId) {
+          this.state.currentTurn = otherPlayerId;
+          this.state.message = `${nextPlayer?.name} has no cards. ${this.state.players[otherPlayerId]?.name}'s turn!`;
+          return;
+        }
+      }
+
       // Use speed order if available, otherwise use normal turn order
       if (this.state.speedOrder && this.state.speedOrder.length === 2) {
         this.state.currentTurn = this.state.speedOrder[0];

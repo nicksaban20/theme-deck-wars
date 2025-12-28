@@ -244,6 +244,21 @@ export function checkGameEnd(gameState: GameState): { ended: boolean; winner: st
     }
   }
 
+  // Check if both players have no cards left - end game
+  const players = Object.values(gameState.players);
+  if (players.length === 2) {
+    const bothEmpty = players.every(p => p.cards.length === 0);
+    if (bothEmpty) {
+      if (players[0].hp > players[1].hp) {
+        return { ended: true, winner: players[0].id };
+      } else if (players[1].hp > players[0].hp) {
+        return { ended: true, winner: players[1].id };
+      } else {
+        return { ended: true, winner: null }; // Tie
+      }
+    }
+  }
+
   return { ended: false, winner: null };
 }
 
