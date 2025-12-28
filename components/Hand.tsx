@@ -33,21 +33,21 @@ export function Hand({ cards, onPlayCard, isCurrentTurn, disabled = false, playe
   const overlap = getOverlap();
 
   return (
-    <div className="relative pb-4">
+    <div className="relative">
       {/* Hand label */}
-      <div className="text-center mb-4">
-        <span className="text-sm text-gray-400">
-          Your Hand ({cards.length} cards)
+      <div className="text-center mb-1">
+        <span className="text-xs text-gray-500">
+          Your Hand ({cards.length})
         </span>
         {isCurrentTurn && !disabled && (
-          <span className="ml-2 text-violet-400 animate-pulse">
-            ← Click a card to play!
+          <span className="ml-2 text-violet-400 animate-pulse text-xs">
+            ← Play a card!
           </span>
         )}
       </div>
 
-      {/* Cards - horizontal scroll on mobile, centered on desktop */}
-      <div className="flex justify-center items-end overflow-x-auto pb-4 px-4">
+      {/* Cards */}
+      <div className="flex justify-center items-end overflow-x-auto pb-1 px-2">
         <div className="flex items-end" style={{ gap: `-${overlap}px` }}>
           {cards.map((card, index) => {
             // Subtle fan effect - less rotation for readability

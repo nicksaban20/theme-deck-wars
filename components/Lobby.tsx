@@ -15,7 +15,7 @@ interface LobbyProps {
 export function Lobby({ roomId, gameState, onJoin, hasJoined, onToggleBlindDraft, isRoomCreator }: LobbyProps) {
   const [copied, setCopied] = useState(false);
   const [copiedSpectate, setCopiedSpectate] = useState(false);
-  
+
   const playerCount = Object.keys(gameState.players).length;
   const players = Object.values(gameState.players);
   const spectatorCount = gameState.spectators?.length || 0;
@@ -42,137 +42,109 @@ export function Lobby({ roomId, gameState, onJoin, hasJoined, onToggleBlindDraft
   };
 
   return (
-    <div className="h-full arena-bg flex flex-col items-center justify-center p-8">
-      {/* Decorative elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+    <div className="h-full arena-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bg-purple-600/20 w-[400px] h-[400px] rounded-full blur-[100px] top-[-50px] left-[-50px] animate-pulse-slow" />
+        <div className="absolute bg-blue-600/20 w-[400px] h-[400px] rounded-full blur-[100px] bottom-[-50px] right-[-50px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className="relative z-10 text-center max-w-lg w-full">
-        <h2 
-          className="text-4xl font-bold text-white mb-2"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Game Lobby
-        </h2>
-        <p className="text-gray-400 mb-8">
-          Share the room code with your friend to start!
-        </p>
+      <div className="relative z-10 w-full max-w-lg">
+        {/* Title */}
+        <div className="text-center mb-8 relative">
+          <div className="absolute inset-0 bg-violet-500/20 blur-3xl -z-10 rounded-full opacity-50" />
+          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-white to-cyan-300 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)] mb-2"
+            style={{ fontFamily: 'var(--font-display)' }}>
+            GAME LOBBY
+          </h1>
+          <p className="text-gray-400 text-sm">Share the code with your opponent</p>
+        </div>
 
-        {/* Room Code */}
-        <div className="mb-6">
-          <p className="text-sm text-gray-400 mb-2">Room Code</p>
+        {/* Room Code Card */}
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-6 text-center relative overflow-hidden group">
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500 to-transparent" />
+
+          <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Room Code</p>
           <button
             onClick={copyRoomCode}
-            className="group relative px-8 py-4 bg-white/5 border border-white/20 rounded-2xl
-                       hover:bg-white/10 transition-all duration-300"
+            className="relative px-8 py-4 bg-black/50 border border-white/10 rounded-xl hover:border-violet-500/50 transition-all group-hover:shadow-[0_0_20px_rgba(124,58,237,0.2)]"
           >
-            <span 
-              className="text-4xl font-mono font-bold tracking-[0.3em] text-white"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+            <span className="text-5xl font-black tracking-[0.4em] text-white font-mono" style={{ fontFamily: 'var(--font-display)' }}>
               {roomId}
             </span>
-            <span className="block text-sm text-gray-400 mt-2 group-hover:text-violet-400 transition-colors">
-              {copied ? "Copied! ✓" : "Click to copy"}
+            <span className="block text-xs text-gray-500 mt-2 group-hover:text-violet-400 transition-colors">
+              {copied ? "✓ Copied!" : "Click to copy"}
             </span>
           </button>
-        </div>
 
-        {/* Spectate Link */}
-        <div className="mb-8">
           <button
             onClick={copySpectateLink}
-            className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+            className="mt-4 block mx-auto text-xs text-gray-500 hover:text-violet-400 transition-colors"
           >
-            {copiedSpectate ? "✓ Spectate link copied!" : "📺 Copy spectate link for viewers"}
+            {copiedSpectate ? "✓ Spectate link copied!" : "📺 Copy spectate link"}
           </button>
         </div>
 
-        {/* Players */}
-        <div className="space-y-4 mb-8">
-          <p className="text-sm text-gray-400">Players ({playerCount}/2)</p>
-          
-          <div className="grid grid-cols-2 gap-4">
-            {/* Player 1 slot */}
-            <div className={`p-4 rounded-xl border transition-all duration-300 ${
-              players[0] 
-                ? "bg-violet-500/10 border-violet-500/30" 
-                : "bg-white/5 border-white/10 border-dashed"
+        {/* Players Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Player 1 */}
+          <div className={`p-4 rounded-xl border transition-all ${players[0]
+              ? "bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+              : "bg-white/5 border-white/10 border-dashed"
             }`}>
-              {players[0] ? (
-                <div>
-                  <span className="text-lg font-semibold text-white">
-                    {players[0].name}
-                  </span>
-                  <span className="block text-sm text-emerald-400 mt-1">
-                    ✓ Connected
-                  </span>
-                </div>
-              ) : (
-                <div className="text-gray-500">
-                  Waiting...
-                </div>
-              )}
-            </div>
+            {players[0] ? (
+              <div className="text-center">
+                <span className="text-2xl mb-2 block">🧙‍♂️</span>
+                <span className="font-bold text-white block truncate">{players[0].name}</span>
+                <span className="text-xs text-emerald-400">● Connected</span>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-2">
+                <span className="text-2xl opacity-30 block">?</span>
+                <span className="text-xs">Waiting...</span>
+              </div>
+            )}
+          </div>
 
-            {/* Player 2 slot */}
-            <div className={`p-4 rounded-xl border transition-all duration-300 ${
-              players[1] 
-                ? "bg-rose-500/10 border-rose-500/30" 
-                : "bg-white/5 border-white/10 border-dashed"
+          {/* Player 2 */}
+          <div className={`p-4 rounded-xl border transition-all ${players[1]
+              ? "bg-rose-500/10 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+              : "bg-white/5 border-white/10 border-dashed"
             }`}>
-              {players[1] ? (
-                <div>
-                  <span className="text-lg font-semibold text-white">
-                    {players[1].name}
-                  </span>
-                  <span className="block text-sm text-emerald-400 mt-1">
-                    ✓ Connected
-                  </span>
-                </div>
-              ) : (
-                <div className="text-gray-500 animate-pulse">
-                  Waiting for opponent...
-                </div>
-              )}
-            </div>
+            {players[1] ? (
+              <div className="text-center">
+                <span className="text-2xl mb-2 block">👾</span>
+                <span className="font-bold text-white block truncate">{players[1].name}</span>
+                <span className="text-xs text-emerald-400">● Connected</span>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-2 animate-pulse">
+                <span className="text-2xl opacity-30 block">?</span>
+                <span className="text-xs">Waiting for opponent...</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Status */}
+        <div className="bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center mb-4">
+          <p className="text-gray-300 text-sm">{gameState.message}</p>
+        </div>
+
+        {/* Connection Indicator */}
+        {hasJoined && (
+          <div className="flex items-center justify-center gap-2 text-xs text-emerald-400">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            Connected to server
+          </div>
+        )}
 
         {/* Spectators */}
         {spectatorCount > 0 && (
-          <div className="mb-6 text-sm text-violet-400">
+          <div className="text-center text-xs text-violet-400 mt-4">
             👁️ {spectatorCount} spectator{spectatorCount !== 1 ? "s" : ""} watching
           </div>
         )}
-
-        {/* Status message */}
-        <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-          <p className="text-gray-300">
-            {gameState.message}
-          </p>
-        </div>
-
-        {/* Connection status indicator */}
-        {hasJoined && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-emerald-400">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            Connected to game server
-          </div>
-        )}
-
-        {/* Game features */}
-        <div className="mt-8 p-4 bg-white/5 rounded-xl border border-white/10 text-left">
-          <h3 className="font-semibold text-white mb-2">This match features:</h3>
-          <ul className="text-sm text-gray-400 space-y-1">
-            <li>📦 <span className="text-amber-400">Draft System</span> - Pick 5 cards from a pool of 7</li>
-            <li>🏆 <span className="text-violet-400">Best of 3</span> - First to win 2 games wins the match</li>
-            <li>🔀 <span className="text-cyan-400">Swap Themes</span> - Rematch option with swapped decks</li>
-            <li>👁️ <span className="text-rose-400">Spectator Mode</span> - Friends can watch live</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@
 import { GameState, Card as CardType } from "@/lib/types";
 import { Hand } from "./Hand";
 import { CardWithArt } from "./CardWithArt";
-import { ManaDisplay } from "./ManaDisplay";
 
 interface BattleArenaProps {
   gameState: GameState;
@@ -29,13 +28,11 @@ export function BattleArena({
     (p) => p.id !== currentPlayerId
   );
 
-  // For spectators, just pick first/second player
   const p1 = isSpectator ? Object.values(gameState.players)[0] : currentPlayer;
   const p2 = isSpectator ? Object.values(gameState.players)[1] : opponent;
 
   const isMyTurn = gameState.currentTurn === currentPlayerId && !isSpectator;
 
-  // Get last played cards for display in the battle zone (current game only)
   const myLastPlayedCard = gameState.playedCards
     .filter((pc) => pc.playerId === (isSpectator ? p1?.id : currentPlayerId) && pc.gameNumber === gameState.gameNumber)
     .sort((a, b) => b.round - a.round)[0]?.card;
@@ -44,7 +41,6 @@ export function BattleArena({
     .filter((pc) => pc.playerId === (isSpectator ? p2?.id : opponent?.id) && pc.gameNumber === gameState.gameNumber)
     .sort((a, b) => b.round - a.round)[0]?.card;
 
-  // Function to calculate bar color
   const getHpColor = (hp: number, max: number, isOpponent: boolean) => {
     const pct = (hp / max) * 100;
     if (pct <= 20) return "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]";
@@ -54,245 +50,164 @@ export function BattleArena({
 
   return (
     <div className="h-full w-full overflow-hidden arena-bg flex flex-col relative">
-      {/* Decorative Background Elements */}
+      {/* Decorative Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-900/10 blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-900/10 blur-[100px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-900/10 blur-[80px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-900/10 blur-[80px]" />
       </div>
 
-      {/* ------------------------------------------------------------------
-          TOP HUD (Fighting Game Style)
-          Absolute positioned at top to overlay everything cleanly
-         ------------------------------------------------------------------ */}
-      <div className="absolute top-0 inset-x-0 z-30 p-2 md:p-4 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="max-w-7xl mx-auto flex items-start justify-between gap-4">
+      {/* TOP HUD - Fixed Height */}
+      <div className="shrink-0 z-30 p-2 md:p-3 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="max-w-6xl mx-auto flex items-start justify-between gap-2">
 
-          {/* LEFT: Player Stats (P1) */}
-          <div className="flex-1 flex flex-col items-start gap-1">
-            <div className="flex items-center gap-3 w-full max-w-sm">
-              {/* Avatar / Icon */}
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 
-                              ${isMyTurn ? 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]' : 'border-white/20 bg-black/40'}`}>
-                <span className="text-xl">🧙‍♂️</span>
+          {/* LEFT: Player 1 */}
+          <div className="flex-1 flex flex-col items-start gap-1 max-w-[280px]">
+            <div className="flex items-center gap-2 w-full">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-2 shrink-0
+                              ${isMyTurn ? 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] bg-amber-500/10' : 'border-white/20 bg-black/40'}`}>
+                <span className="text-lg">🧙‍♂️</span>
               </div>
-
-              {/* Health Bar Container */}
-              <div className="flex-1">
-                <div className="flex justify-between items-end mb-1">
-                  <h2 className="font-bold text-white tracking-widest text-shadow-sm uppercase text-sm md:text-base">
-                    {p1?.name || "Player 1"}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-blue-300 font-bold uppercase tracking-wider">Mana</span>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: p1?.maxMana || 5 }).map((_, i) => (
-                          <div key={i} className={`w-2 h-3 rounded-sm ${i < (p1?.mana || 0) ? 'bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.8)]' : 'bg-gray-800'}`} />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="font-mono font-bold text-white text-lg">{p1?.hp}<span className="text-gray-500 text-xs">/{p1?.maxHp || 20}</span></span>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5">
+                  <h2 className="font-bold text-white text-xs md:text-sm uppercase tracking-wide truncate">{p1?.name || "Player 1"}</h2>
+                  <span className="font-mono font-bold text-white text-sm">{p1?.hp}<span className="text-gray-500 text-xs">/{p1?.maxHp || 20}</span></span>
                 </div>
-                {/* The Bar */}
-                <div className="relative h-4 w-full bg-gray-900/80 rounded skew-x-[-10deg] border border-white/10 overflow-hidden">
-                  <div
-                    className={`absolute top-0 bottom-0 left-0 transition-all duration-500 ${getHpColor(p1?.hp || 0, 20, false)}`}
-                    style={{ width: `${((p1?.hp || 0) / (p1?.maxHp || 20)) * 100}%` }}
-                  />
-                  {/* Shine */}
+                <div className="relative h-3 w-full bg-gray-900/80 rounded-full border border-white/10 overflow-hidden">
+                  <div className={`absolute top-0 bottom-0 left-0 transition-all duration-500 ${getHpColor(p1?.hp || 0, 20, false)}`}
+                    style={{ width: `${((p1?.hp || 0) / (p1?.maxHp || 20)) * 100}%` }} />
                   <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
                 </div>
-              </div>
-            </div>
-
-            {/* Status Effects Row */}
-            {p1?.statusEffects && p1.statusEffects.length > 0 && (
-              <div className="flex gap-1 ml-14">
-                {p1.statusEffects.map((e, i) => (
-                  <span key={i} className="text-[10px] px-1.5 py-0.5 bg-violet-900/60 border border-violet-500/30 rounded text-violet-200">
-                    {e.type}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-
-          {/* CENTER: Round Timer / Info */}
-          <div className="shrink-0 flex flex-col items-center mx-2 z-10">
-            <div className="relative group">
-              {/* Round Badge */}
-              <div className="bg-slate-900/90 border-2 border-slate-700/50 px-5 py-1.5 rounded-lg transform skew-x-[-10deg] shadow-lg
-                              group-hover:border-slate-500/80 transition-colors cursor-help">
-                <div className="transform skew-x-[10deg] flex flex-col items-center">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mb-0.5">Round</span>
-                  <span className="text-2xl font-black text-white leading-none" style={{ fontFamily: "var(--font-display)" }}>
-                    {gameState.round}
-                  </span>
+                {/* Mana Pips */}
+                <div className="flex gap-0.5 mt-1">
+                  {Array.from({ length: p1?.maxMana || 5 }).map((_, i) => (
+                    <div key={i} className={`w-2 h-2 rounded-sm ${i < (p1?.mana || 0) ? 'bg-cyan-400' : 'bg-gray-800'}`} />
+                  ))}
                 </div>
               </div>
-              {/* VS Badge - Moved down to allow text reading */}
-              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-rose-600 w-8 h-8 flex items-center justify-center rounded-full border-2 border-white shadow-lg z-20">
-                <span className="text-[10px] font-black italic text-white">VS</span>
-              </div>
-            </div>
-
-            {/* Match Score - Moved down slightly */}
-            <div className="mt-6 flex gap-3 text-xs font-mono font-bold text-gray-400 bg-black/60 px-3 py-1 rounded-full border border-white/5">
-              <span className="text-emerald-400 shadow-emerald-500/20 drop-shadow">{p1?.matchWins || 0}</span>
-              <span className="text-gray-600">|</span>
-              <span className="text-rose-400 shadow-rose-500/20 drop-shadow">{p2?.matchWins || 0}</span>
             </div>
           </div>
 
+          {/* CENTER: Round + Score */}
+          <div className="shrink-0 flex flex-col items-center px-2">
+            <div className="bg-slate-900/90 border border-slate-700/50 px-4 py-1 rounded-lg shadow-lg">
+              <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest block text-center">Round</span>
+              <span className="text-xl font-black text-white block text-center leading-none" style={{ fontFamily: "var(--font-display)" }}>
+                {gameState.round}
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 text-xs font-mono font-bold bg-black/50 px-2 py-0.5 rounded-full">
+              <span className="text-emerald-400">{p1?.matchWins || 0}</span>
+              <span className="text-gray-600">-</span>
+              <span className="text-rose-400">{p2?.matchWins || 0}</span>
+            </div>
+          </div>
 
-          {/* RIGHT: Opponent Stats (P2) */}
-          <div className="flex-1 flex flex-col items-end gap-1">
-            <div className="flex items-center gap-3 w-full max-w-sm flex-row-reverse">
-              {/* Avatar / Icon */}
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 
-                                ${gameState.currentTurn === p2?.id ? 'border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'border-white/20 bg-black/40'}`}>
-                <span className="text-xl">👾</span>
+          {/* RIGHT: Player 2 */}
+          <div className="flex-1 flex flex-col items-end gap-1 max-w-[280px]">
+            <div className="flex items-center gap-2 w-full flex-row-reverse">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-2 shrink-0
+                              ${gameState.currentTurn === p2?.id ? 'border-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)] bg-rose-500/10' : 'border-white/20 bg-black/40'}`}>
+                <span className="text-lg">👾</span>
               </div>
-
-              {/* Health Bar Container */}
-              <div className="flex-1">
-                <div className="flex justify-between items-end mb-1 flex-row-reverse">
-                  <h2 className="font-bold text-white tracking-widest text-shadow-sm uppercase text-sm md:text-base">
-                    {p2?.name || "Opponent"}
-                  </h2>
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <div className="flex items-center gap-1 flex-row-reverse">
-                      <span className="text-xs text-purple-300 font-bold uppercase tracking-wider">Mana</span>
-                      <div className="flex gap-0.5 flex-row-reverse">
-                        {Array.from({ length: p2?.maxMana || 5 }).map((_, i) => (
-                          <div key={i} className={`w-2 h-3 rounded-sm ${i < (p2?.mana || 0) ? 'bg-purple-400 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : 'bg-gray-800'}`} />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="font-mono font-bold text-white text-lg">{p2?.hp}<span className="text-gray-500 text-xs">/{p2?.maxHp || 20}</span></span>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5 flex-row-reverse">
+                  <h2 className="font-bold text-white text-xs md:text-sm uppercase tracking-wide truncate">{p2?.name || "Opponent"}</h2>
+                  <span className="font-mono font-bold text-white text-sm">{p2?.hp}<span className="text-gray-500 text-xs">/{p2?.maxHp || 20}</span></span>
                 </div>
-                {/* The Bar - Reversed Fill */}
-                <div className="relative h-4 w-full bg-gray-900/80 rounded skew-x-[10deg] border border-white/10 overflow-hidden">
-                  <div
-                    className={`absolute top-0 bottom-0 right-0 transition-all duration-500 ${getHpColor(p2?.hp || 0, 20, true)}`}
-                    style={{ width: `${((p2?.hp || 0) / (p2?.maxHp || 20)) * 100}%` }}
-                  />
-                  {/* Shine */}
+                <div className="relative h-3 w-full bg-gray-900/80 rounded-full border border-white/10 overflow-hidden">
+                  <div className={`absolute top-0 bottom-0 right-0 transition-all duration-500 ${getHpColor(p2?.hp || 0, 20, true)}`}
+                    style={{ width: `${((p2?.hp || 0) / (p2?.maxHp || 20)) * 100}%` }} />
                   <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
                 </div>
+                {/* Mana Pips */}
+                <div className="flex gap-0.5 mt-1 flex-row-reverse">
+                  {Array.from({ length: p2?.maxMana || 5 }).map((_, i) => (
+                    <div key={i} className={`w-2 h-2 rounded-sm ${i < (p2?.mana || 0) ? 'bg-purple-400' : 'bg-gray-800'}`} />
+                  ))}
+                </div>
               </div>
             </div>
-
-            {/* Status Effects Row */}
-            {p2?.statusEffects && p2.statusEffects.length > 0 && (
-              <div className="flex gap-1 mr-14 flex-row-reverse">
-                {p2.statusEffects.map((e, i) => (
-                  <span key={i} className="text-[10px] px-1.5 py-0.5 bg-rose-900/60 border border-rose-500/30 rounded text-rose-200">
-                    {e.type}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
-
         </div>
       </div>
 
-      {/* ------------------------------------------------------------------
-          MAIN GAME AREA
-          Flex column to distribute space. 
-          Reduced top padding and gaps to fix scroll issues.
-         ------------------------------------------------------------------ */}
-      <div className="flex-1 flex flex-col pt-20 pb-2 px-4 w-full max-w-7xl mx-auto min-h-0">
+      {/* MAIN GAME AREA */}
+      <div className="flex-1 flex flex-col px-4 w-full max-w-6xl mx-auto min-h-0">
 
-        {/* TOP SECTION: Opponent Hand */}
-        <div className="flex justify-center mb-2 transition-all duration-500 min-h-[50px] shrink-0">
+        {/* Opponent Hand - Compact */}
+        <div className="flex justify-center py-1 shrink-0">
           {p2 && (
-            <div className="flex items-center gap-2">
-              {/* Compact Hand Backs */}
+            <div className="flex items-center gap-1">
               {p2.cards.map((_, i) => (
-                <div key={i} className="w-10 h-14 md:w-12 md:h-16 bg-gradient-to-br from-rose-900 to-black border border-rose-500/30 rounded shadow-md transform hover:-translate-y-2 transition-transform duration-300" />
+                <div key={i} className="w-8 h-11 bg-gradient-to-br from-rose-900 to-black border border-rose-500/30 rounded shadow-sm" />
               ))}
-              {p2.cards.length === 0 && <span className="text-gray-600 text-xs uppercase tracking-widest">Empty Hand</span>}
+              {p2.cards.length === 0 && <span className="text-gray-600 text-xs">Empty</span>}
             </div>
           )}
         </div>
 
+        {/* Battle Zone */}
+        <div className="flex-1 flex items-center justify-center relative min-h-0">
 
-        {/* CENTER SECTION: Battle Zone */}
-        <div className="flex-1 flex items-center justify-center relative my-1 min-h-[250px]">
-
-          {/* Ability Trigger Notification (Floating) */}
+          {/* Ability Notification */}
           {abilityTriggered && (
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 animate-bounce-in">
-              <div className="bg-black/90 border border-amber-500/50 text-amber-100 px-6 py-3 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center gap-3">
-                <span className="text-2xl">⚡</span>
-                <div>
-                  <div className="font-bold text-sm uppercase tracking-wider text-amber-500">{abilityTriggered.cardName}</div>
-                  <div className="text-xs">{abilityTriggered.abilityText}</div>
-                </div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50">
+              <div className="bg-black/90 border border-amber-500/50 text-amber-100 px-4 py-2 rounded-full text-xs shadow-lg flex items-center gap-2">
+                <span>⚡</span>
+                <span className="font-bold text-amber-400">{abilityTriggered.cardName}</span>
               </div>
             </div>
           )}
 
-          {/* Battle Slots */}
-          <div className="grid grid-cols-2 gap-8 md:gap-24 w-full max-w-3xl items-center justify-items-center">
+          {/* Battle Slots with VS */}
+          <div className="flex items-center justify-center gap-4 md:gap-8">
 
-            {/* OPPONENT SLOT */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative">
-                {opponentLastPlayedCard ? (
-                  <div className="animate-slide-down transform scale-110 shadow-2xl shadow-rose-900/50 rounded-xl">
-                    <CardWithArt card={opponentLastPlayedCard} size="md" />
-                  </div>
-                ) : (
-                  <div className="w-[180px] h-[250px] rounded-xl border-2 border-dashed border-white/5 bg-white/5 flex items-center justify-center">
-                    <span className="text-white/10 text-4xl font-black opacity-50">?</span>
-                  </div>
-                )}
-
-                {/* Damage Number Popups would go here */}
-              </div>
+            {/* Opponent Slot */}
+            <div className="flex flex-col items-center">
+              {opponentLastPlayedCard ? (
+                <div className="animate-slide-down transform scale-90 md:scale-100">
+                  <CardWithArt card={opponentLastPlayedCard} size="sm" />
+                </div>
+              ) : (
+                <div className="w-[120px] h-[168px] md:w-[140px] md:h-[196px] rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center">
+                  <span className="text-white/20 text-2xl">?</span>
+                </div>
+              )}
             </div>
 
-            {/* PLAYER SLOT */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative">
-                {myLastPlayedCard ? (
-                  <div className="animate-slide-up transform scale-110 shadow-2xl shadow-cyan-900/50 rounded-xl">
-                    <CardWithArt card={myLastPlayedCard} size="md" />
-                  </div>
-                ) : (
-                  <div className="w-[180px] h-[250px] rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center group-hover:border-cyan-500/30 transition-colors">
-                    <span className="text-xs text-gray-500 uppercase tracking-widest">Your Card</span>
-                  </div>
-                )}
-              </div>
+            {/* VS Badge - Now between slots, not on round */}
+            <div className="w-12 h-12 bg-gradient-to-br from-rose-600 to-purple-700 rounded-full flex items-center justify-center shadow-lg border-2 border-white/30">
+              <span className="text-xs font-black italic text-white">VS</span>
             </div>
 
+            {/* Player Slot */}
+            <div className="flex flex-col items-center">
+              {myLastPlayedCard ? (
+                <div className="animate-slide-up transform scale-90 md:scale-100">
+                  <CardWithArt card={myLastPlayedCard} size="sm" />
+                </div>
+              ) : (
+                <div className="w-[120px] h-[168px] md:w-[140px] md:h-[196px] rounded-xl border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center">
+                  <span className="text-xs text-gray-500 uppercase">You</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-
-        {/* BOTTOM SECTION: Player Hand */}
+        {/* Player Hand - Compact */}
         {!isSpectator && p1 && (
-          <div className="mt-auto pt-2">
-            <div className="relative z-20">
-              <Hand
-                cards={p1.cards}
-                onPlayCard={onPlayCard}
-                isCurrentTurn={isMyTurn}
-                disabled={gameState.phase !== "battle"}
-                player={p1}
-                gameState={gameState}
-              />
-            </div>
+          <div className="shrink-0 pb-1">
+            <Hand
+              cards={p1.cards}
+              onPlayCard={onPlayCard}
+              isCurrentTurn={isMyTurn}
+              disabled={gameState.phase !== "battle"}
+              player={p1}
+              gameState={gameState}
+            />
           </div>
         )}
-
       </div>
     </div>
   );

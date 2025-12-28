@@ -24,7 +24,10 @@ export function DraftPhase({
   if (!currentPlayer) {
     return (
       <div className="h-full arena-bg flex items-center justify-center">
-        <p className="text-gray-400">Loading draft...</p>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading draft...</p>
+        </div>
       </div>
     );
   }
@@ -34,93 +37,65 @@ export function DraftPhase({
   const poolCount = currentPlayer.draftPool.length;
 
   return (
-    <div className="h-full arena-bg flex flex-col p-4 md:p-8">
-      {/* Decorative background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
+    <div className="h-full arena-bg flex flex-col overflow-hidden relative">
+      {/* Decorative Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bg-amber-600/10 w-[400px] h-[400px] rounded-full blur-[100px] top-[-100px] left-[-100px]" />
+        <div className="absolute bg-violet-600/10 w-[400px] h-[400px] rounded-full blur-[100px] bottom-[-100px] right-[-100px]" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto w-full">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1
-            className="text-3xl md:text-4xl font-bold text-white mb-2"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Draft Your Deck
+      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full p-4 min-h-0">
+        {/* Header - Compact */}
+        <div className="text-center mb-4 shrink-0">
+          <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-white to-violet-300"
+            style={{ fontFamily: "var(--font-display)" }}>
+            DRAFT YOUR DECK
           </h1>
-          <p className="text-gray-400 mb-4">
-            Select {CARDS_PER_PLAYER} cards from your pool of {DRAFT_POOL_SIZE}.
-            {!blindDraft && " Watch for cards with ⚡ - they synergize with your deck!"}
+          <p className="text-gray-400 text-sm mt-1">
+            Select {CARDS_PER_PLAYER} cards • Theme: <span className="text-amber-400 font-bold">"{currentPlayer.theme}"</span>
           </p>
 
-          {/* Progress indicator */}
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className={`px-4 py-2 rounded-lg ${canConfirm
-                ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
-                : "bg-violet-500/20 border border-violet-500/40 text-violet-400"
+          {/* Progress Row */}
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <div className={`px-4 py-1.5 rounded-full text-sm font-bold ${canConfirm ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400" : "bg-violet-500/20 border border-violet-500/40 text-violet-400"
               }`}>
-              <span className="font-bold">{selectedCount}</span> / {CARDS_PER_PLAYER} selected
+              {selectedCount}/{CARDS_PER_PLAYER} Selected
             </div>
             {opponent && (
-              <div className={`px-4 py-2 rounded-lg ${opponent.isDraftReady
-                  ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
-                  : "bg-white/5 border border-white/10 text-gray-400"
+              <div className={`px-4 py-1.5 rounded-full text-sm ${opponent.isDraftReady ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-500"
                 }`}>
-                {blindDraft ? (
-                  <>
-                    {opponent.name}: {opponent.isDraftReady ? "Ready ✓" : "Drafting..."}
-                    <span className="text-violet-400 ml-2">(Blind)</span>
-                  </>
-                ) : (
-                  <>
-                    {opponent.name}: {opponent.draftedCards.length}/{CARDS_PER_PLAYER} selected
-                    {opponent.isDraftReady && " ✓ Ready"}
-                  </>
-                )}
+                {opponent.name}: {opponent.isDraftReady ? "Ready ✓" : `${opponent.draftedCards.length}/${CARDS_PER_PLAYER}`}
               </div>
             )}
           </div>
-
-          {/* Theme reminder */}
-          <p className="text-sm text-gray-500">
-            Your theme: <span className="text-amber-400">&quot;{currentPlayer.theme}&quot;</span>
-          </p>
         </div>
 
-        {/* Selected Cards */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white">
-              Your Deck ({selectedCount}/{CARDS_PER_PLAYER})
-            </h2>
+        {/* Selected Deck - Compact */}
+        <div className="mb-4 shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Your Deck</h2>
             {canConfirm && !currentPlayer.isDraftReady && (
               <button
                 onClick={onConfirmDraft}
-                className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-cyan-600 
-                           rounded-lg font-semibold text-white
-                           hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300
-                           hover:scale-105 active:scale-95"
+                className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full font-bold text-sm text-white
+                           shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] transition-all hover:scale-105"
               >
                 Confirm Deck ✓
               </button>
             )}
           </div>
 
-          <div className="bg-white/5 rounded-2xl p-4 border border-white/10 min-h-[200px]">
+          <div className="bg-black/30 backdrop-blur-sm rounded-xl p-3 border border-white/5 min-h-[120px]">
             {currentPlayer.draftedCards.length > 0 ? (
-              <div className="flex flex-wrap gap-4 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {currentPlayer.draftedCards.map((card) => (
                   <div key={card.id} className="relative group">
                     <CardWithArt card={card} size="sm" />
                     {!currentPlayer.isDraftReady && (
                       <button
                         onClick={() => onDiscardCard(card.id)}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full 
-                                   text-white text-sm font-bold opacity-0 group-hover:opacity-100
-                                   transition-opacity hover:bg-red-600 flex items-center justify-center"
-                        title="Remove from deck"
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs font-bold
+                                   opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 flex items-center justify-center"
                       >
                         ×
                       </button>
@@ -129,76 +104,65 @@ export function DraftPhase({
                 ))}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-32 text-gray-500">
-                Click cards below to add them to your deck
+              <div className="flex items-center justify-center h-24 text-gray-600 text-sm">
+                Click cards below to add them
               </div>
             )}
           </div>
 
           {currentPlayer.isDraftReady && (
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-lg text-emerald-400">
-                <span>✓</span>
-                <span>Deck confirmed! Waiting for opponent...</span>
-              </div>
+            <div className="mt-2 text-center">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm">
+                ✓ Deck confirmed! Waiting...
+              </span>
             </div>
           )}
         </div>
 
-        {/* Available Pool */}
+        {/* Available Pool - Scrollable */}
         {!currentPlayer.isDraftReady && poolCount > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              Available Cards ({poolCount} remaining)
+          <div className="flex-1 min-h-0 flex flex-col">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-2 shrink-0">
+              Available ({poolCount})
             </h2>
-            <p className="text-sm text-gray-400 mb-4">
-              Click a card to add it to your deck. You must discard {poolCount - (CARDS_PER_PLAYER - selectedCount)} cards.
-            </p>
 
-            <div className="flex flex-wrap gap-4 justify-center">
-              {currentPlayer.draftPool.map((card) => {
-                const { synergies } = getCardSynergies(card, currentPlayer);
-                const hasSynergy = synergies.length > 0;
+            <div className="flex-1 overflow-y-auto overflow-x-hidden pb-2">
+              <div className="flex flex-wrap gap-3 justify-center">
+                {currentPlayer.draftPool.map((card) => {
+                  const { synergies } = getCardSynergies(card, currentPlayer);
+                  const hasSynergy = synergies.length > 0;
 
-                return (
-                  <div
-                    key={card.id}
-                    className={`relative cursor-pointer transform transition-all duration-200 
-                               hover:scale-105 hover:-translate-y-2 ${hasSynergy ? "ring-2 ring-yellow-400/50" : ""
-                      }`}
-                    onClick={() => {
-                      if (selectedCount < CARDS_PER_PLAYER) {
-                        onSelectCard(card.id);
-                      }
-                    }}
-                    title={hasSynergy ? `Synergies: ${synergies.join(", ")}` : undefined}
-                  >
-                    <CardWithArt
-                      card={card}
-                      size="md"
-                      isPlayable={selectedCount < CARDS_PER_PLAYER}
-                      disabled={selectedCount >= CARDS_PER_PLAYER}
-                    />
-                    {hasSynergy && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-black text-xs font-bold">
-                        ⚡
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  return (
+                    <div
+                      key={card.id}
+                      className={`relative cursor-pointer transform transition-all duration-200 
+                                 hover:scale-105 hover:-translate-y-1 ${hasSynergy ? "ring-2 ring-yellow-400/50 rounded-xl" : ""}`}
+                      onClick={() => {
+                        if (selectedCount < CARDS_PER_PLAYER) {
+                          onSelectCard(card.id);
+                        }
+                      }}
+                      title={hasSynergy ? `Synergies: ${synergies.join(", ")}` : undefined}
+                    >
+                      <CardWithArt
+                        card={card}
+                        size="sm"
+                        isPlayable={selectedCount < CARDS_PER_PLAYER}
+                        disabled={selectedCount >= CARDS_PER_PLAYER}
+                      />
+                      {hasSynergy && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-black text-xs font-bold">
+                          ⚡
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
-
-        {/* Instructions */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>
-            💡 Tip: Balance your deck with high-attack cards for offense and high-defense cards for protection.
-          </p>
-        </div>
       </div>
     </div>
   );
 }
-
