@@ -32,110 +32,175 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen arena-bg flex flex-col items-center justify-center p-8">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <button
-          onClick={() => setMode("join")}
-          className="group relative px-8 py-4 bg-white/5 border border-white/20
-                         rounded-xl font-semibold text-lg text-white overflow-hidden
-                         hover:bg-white/10 hover:border-white/30 transition-all duration-300
-                         hover:scale-105 active:scale-95"
-        >
-          Join Game
-        </button>
+    <main className="min-h-screen arena-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bg-purple-600/20 w-[500px] h-[500px] rounded-full blur-[120px] top-[-100px] left-[-100px] animate-pulse-slow" />
+        <div className="absolute bg-blue-600/20 w-[500px] h-[500px] rounded-full blur-[120px] bottom-[-100px] right-[-100px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
       </div>
-        )}
 
-      {mode === "create" && (
-        <div className="space-y-6 animate-fade-in">
-          <p className="text-gray-300">
-            Create a new game and share the code with your friend!
+      <div className="relative z-10 w-full max-w-lg mb-8">
+        {/* Title Section */}
+        <div className="text-center mb-10 relative group cursor-default">
+          <div className="absolute inset-0 bg-violet-500/20 blur-3xl -z-10 rounded-full opacity-50 group-hover:opacity-75 transition-opacity" />
+          <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-white to-cyan-300 drop-shadow-[0_0_25px_rgba(139,92,246,0.6)] mb-2 tracking-tighter"
+            style={{ fontFamily: 'var(--font-display)' }}>
+            THEME<br />WARS
+          </h1>
+          <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-cyan-400 to-transparent mb-4 opacity-75" />
+          <p className="text-cyan-200/80 tracking-[0.3em] uppercase text-xs md:text-sm font-bold animate-pulse">
+            Deck Building • AI Art • Strategy
           </p>
-          <button
-            onClick={handleCreate}
-            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 
-                         rounded-xl font-semibold text-lg text-white
-                         hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300
-                         hover:scale-105 active:scale-95"
-          >
-            Start Game →
-          </button>
-          <button
-            onClick={() => setMode("initial")}
-            className="block mx-auto text-gray-400 hover:text-white transition-colors"
-          >
-            ← Back
-          </button>
         </div>
-      )}
 
-      {mode === "join" && (
-        <div className="space-y-6 animate-fade-in">
-          <p className="text-gray-300">Enter the 4-letter game code:</p>
-          <input
-            type="text"
-            maxLength={4}
-            placeholder="ABCD"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            className="w-32 px-6 py-4 bg-white/5 border border-white/10 rounded-xl 
-                         text-white text-center text-2xl font-mono tracking-widest
-                         focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20
-                         transition-all duration-200 uppercase"
-          />
-          <div>
-            <button
-              onClick={handleJoin}
-              disabled={joinCode.length !== 4}
-              className="px-8 py-4 bg-gradient-to-r from-amber-600 to-orange-600 
-                           rounded-xl font-semibold text-lg text-white
-                           hover:shadow-lg hover:shadow-amber-500/25 transition-all duration-300
-                           hover:scale-105 active:scale-95
-                           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              Join Game →
-            </button>
+        {/* Main Card */}
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Top Line Gradient */}
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500 to-transparent" />
+
+          {/* Name Input - Always visible first */}
+          <div className="mb-8">
+            <label className="block text-xs font-bold text-violet-300 uppercase tracking-wider mb-2 ml-1">
+              Identify Yourself
+            </label>
+            <div className="relative group">
+              <input
+                type="text"
+                placeholder="Enter Username..."
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                className="w-full px-4 py-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-600 text-lg font-bold tracking-wide
+                           focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all
+                           group-hover:border-white/20"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl animate-pulse">
+                👾
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setMode("initial")}
-            className="block mx-auto text-gray-400 hover:text-white transition-colors"
-          >
-            ← Back
-          </button>
+
+          {mode === "initial" && (
+            <div className="grid gap-4 animate-fade-in">
+              <button
+                onClick={() => setMode("create")}
+                disabled={!playerName.trim()}
+                className="group relative w-full py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl font-bold text-lg text-white overflow-hidden
+                           shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98]
+                           disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+              >
+                <div className="relative z-10 flex items-center justify-center gap-2">
+                  <span>Create New Loop</span>
+                  <span className="text-xl">⚔️</span>
+                </div>
+                {/* Shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </button>
+
+              <button
+                onClick={() => setMode("join")}
+                disabled={!playerName.trim()}
+                className="w-full py-4 bg-white/5 border border-white/10 rounded-xl font-bold text-lg text-gray-300
+                           hover:bg-white/10 hover:text-white transition-all hover:border-white/30 active:scale-[0.98]
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Join Existing Loop
+              </button>
+            </div>
+          )}
+
+          {mode === "create" && (
+            <div className="space-y-6 animate-slide-up">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+                <p className="text-emerald-200 text-sm">
+                  Ready to start a new universe?
+                </p>
+              </div>
+              <button
+                onClick={handleCreate}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl font-bold text-lg text-white
+                           shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Launch Game →
+              </button>
+              <button
+                onClick={() => setMode("initial")}
+                className="w-full py-2 text-gray-500 hover:text-gray-300 text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {mode === "join" && (
+            <div className="space-y-6 animate-slide-up">
+              <div>
+                <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-2 ml-1">
+                  Access Code
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  placeholder="ABCD"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  className="w-full px-6 py-4 bg-black/50 border border-amber-500/30 rounded-xl 
+                             text-white text-center text-3xl font-mono tracking-[0.5em] uppercase
+                             focus:outline-none focus:border-amber-500 focus:shadow-[0_0_20px_rgba(245,158,11,0.2)]
+                             transition-all duration-200"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={handleJoin}
+                disabled={joinCode.length !== 4}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-lg text-white
+                           shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98]
+                           disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+              >
+                Connect to Match
+              </button>
+              <button
+                onClick={() => setMode("initial")}
+                className="w-full py-2 text-gray-500 hover:text-gray-300 text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Art Style Toggle */}
-      <div className="mt-8">
+      {/* Footer Controls */}
+      <div className="flex flex-col items-center gap-4 z-10 w-full max-w-lg">
         <ArtStyleToggle />
+
+        {/* Accordion-style How To Play */}
+        <details className="w-full group bg-white/5 border border-white/10 rounded-xl overflow-hidden cursor-pointer open:bg-black/80 transition-colors">
+          <summary className="p-4 text-center font-bold text-violet-300 hover:text-white transition-colors select-none list-none flex items-center justify-center gap-2">
+            <span>How To Play</span>
+            <span className="text-xs opacity-50 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="p-6 pt-0 border-t border-white/5 text-sm text-gray-400 space-y-3">
+            <div className="flex gap-3 items-start">
+              <span className="w-6 h-6 rounded bg-violet-500/20 text-violet-400 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+              <p>Create a game & share the code.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="w-6 h-6 rounded bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+              <p>Pick a theme ("Cyberpunk" vs "Tacos").</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="w-6 h-6 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+              <p>Draft 5 AI-generated cards.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">4</span>
+              <p>Battle! First to 2 wins.</p>
+            </div>
+          </div>
+        </details>
       </div>
 
-      {/* How to Play */}
-      <div className="mt-8 text-left bg-white/5 rounded-2xl p-6 border border-white/10">
-        <h2 className="text-xl font-bold mb-4 text-violet-400" style={{ fontFamily: "var(--font-display)" }}>
-          How to Play
-        </h2>
-        <ol className="space-y-3 text-gray-300">
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 flex items-center justify-center text-sm font-bold">1</span>
-            <span>Create a game and share the code with a friend</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center text-sm font-bold">2</span>
-            <span>Each player picks a weird theme (e.g., &quot;90s Cartoons&quot; vs &quot;Medieval Weapons&quot;)</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold">3</span>
-            <span>Draft 5 cards from your AI-generated pool of 7</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-bold">4</span>
-            <span>Battle in a Best of 3! First to win 2 games takes the match</span>
-          </li>
-        </ol>
-      </div>
-    </div>
-    </main >
+    </main>
   );
 }
