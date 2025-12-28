@@ -141,14 +141,18 @@ export async function POST(request: NextRequest) {
     // Initialize database if configured
     await ensureDbInitialized();
 
+    console.log(`[Image API] Processing request for: "${prompt.slice(0, 50)}..."`);
+    console.log(`[Image API] Config Status -> Postgres: ${POSTGRES_URL ? 'YES' : 'NO'}, Blob: ${isBlobConfigured() ? 'YES' : 'NO'}`);
+
     // 1. Check database cache first (persistent)
     if (POSTGRES_URL) {
       try {
         const cachedUrl = await getCachedImageUrl(normalizedPrompt);
         if (cachedUrl) {
-          console.log(`[Image API] DB cache hit for: ${normalizedPrompt.slice(0, 30)}...`);
+          console.log(`[Image API] CACHE HIT! Returning cached image for: ${normalizedPrompt.slice(0, 30)}...`);
           return NextResponse.json({ image: cachedUrl, cached: true });
         }
+        console.log(`[Image API] Cache MISS for: ${normalizedPrompt.slice(0, 30)}...`);
       } catch (error) {
         console.error(`[Image API] Error checking database cache:`, error);
         // Continue to generate new image if cache check fails
