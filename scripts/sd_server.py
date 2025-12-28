@@ -32,9 +32,19 @@ def get_model():
         print("[SD Server] Model loaded!")
     return sd
 
-@app.route("/v1/images/generations", methods=["POST"])
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+@app.route("/v1/images/generations", methods=["POST", "OPTIONS"])
 def generate_image():
     """OpenAI-compatible image generation endpoint"""
+    if request.method == "OPTIONS":
+        return jsonify({})
+
     try:
         data = request.json or {}
         prompt = data.get("prompt", "fantasy art")
