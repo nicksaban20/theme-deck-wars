@@ -4,40 +4,16 @@ Local Stable Diffusion GGUF API Server
 OpenAI-compatible endpoint for the card game
 """
 
-from stable_diffusion_cpp import StableDiffusion
-from flask import Flask, request, jsonify
-import base64
-import io
-import os
+import threading
+
+# Lock to prevent concurrent access to the model (SD C++ is not thread-safe)
+generation_lock = threading.Lock()
+
+# ... (rest of imports)
 
 app = Flask(__name__)
 
-# Model path - SD 2.1 Turbo for fast 1-4 step generation
-MODEL_PATH = os.environ.get(
-    "SD_MODEL_PATH",
-    "sd-turbo-Q4_0.gguf"
-)
-
-# Initialize model (load once on startup for speed)
-print(f"[SD Server] Loading model from {MODEL_PATH}...")
-sd = None
-
-def get_model():
-    global sd
-    if sd is None:
-        sd = StableDiffusion(
-            model_path=MODEL_PATH,
-            wtype="q4_0",  # Match GGUF quantization
-        )
-        print("[SD Server] Model loaded!")
-    return sd
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+# ... (model loading)
 
 @app.route("/v1/images/generations", methods=["POST", "OPTIONS"])
 def generate_image():
@@ -48,26 +24,25 @@ def generate_image():
     try:
         data = request.json or {}
         prompt = data.get("prompt", "fantasy art")
-        size = data.get("size", "512x512")
         
-        # Parse size
+        # Force 512x512 for stability (SD Turbo is optimized for this)
         width, height = 512, 512
-        if "x" in size:
-            parts = size.lower().split("x")
-            width, height = int(parts[0]), int(parts[1])
         
-        print(f"[SD Server] Generating: {prompt[:50]}... ({width}x{height})")
+        print(f"[SD Server] Request: {prompt[:50]}...")
         
-        model = get_model()
-        
-        # Generate image with speed-optimized settings (Turbo model)
-        images = model.generate_image(
-            prompt=prompt,
-            width=width,
-            height=height,
-            sample_steps=1,   # Turbo is designed for 1-4 steps
-            cfg_scale=1.0,    # Low CFG for Turbo
-        )
+        # Acquire lock to ensure only one generation happens at a time
+        with generation_lock:
+            print(f"[SD Server] Processing (Access Granted)...")
+            model = get_model()
+            
+            # Generate image with speed-optimized settings
+            images = model.generate_image(
+                prompt=prompt,
+                width=width,
+                height=height,
+                sample_steps=1,
+                cfg_scale=1.0,
+            )
         
         if not images:
             return jsonify({"error": "No images generated"}), 500
