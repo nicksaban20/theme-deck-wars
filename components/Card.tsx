@@ -310,19 +310,39 @@ export function Card({
         {/* Main Art Area */}
         {renderArtArea()}
 
-        {/* Stats Bar - Compact & Clean */}
-        <div className="bg-black/40 backdrop-blur-md rounded-lg p-1.5 flex justify-between items-center mb-1.5 border border-white/5">
-          <div className="flex flex-col items-center flex-1 border-r border-white/10">
-            <span className="text-[10px] text-red-300 uppercase font-bold tracking-wider">ATK</span>
-            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.attack}</span>
+        {/* Stats Bar - Tech Badges */}
+        <div className="flex justify-between items-end mb-2 px-1 gap-1">
+          <div className="flex-1 flex flex-col items-center group/stat">
+            <span className="text-[9px] text-rose-300 font-bold tracking-widest opacity-60 mb-0.5 group-hover/stat:opacity-100 transition-opacity">ATK</span>
+            <div className={`w-full bg-black/40 border border-white/5 rounded-lg p-1 flex items-center justify-center gap-1.5 
+                            shadow-[0_2px_4px_rgba(0,0,0,0.2)] group-hover/stat:border-rose-500/30 transition-colors`}>
+              <span className="text-rose-400 drop-shadow-md text-xs">⚔️</span>
+              <span className="text-white font-bold leading-none" style={{ fontFamily: "var(--font-display)", fontSize: size === "sm" ? "0.9rem" : "1.1rem" }}>
+                {cardWithDefaults.attack}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-center flex-1 border-r border-white/10">
-            <span className="text-[10px] text-blue-300 uppercase font-bold tracking-wider">DEF</span>
-            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.defense}</span>
+
+          <div className="flex-1 flex flex-col items-center group/stat">
+            <span className="text-[9px] text-cyan-300 font-bold tracking-widest opacity-60 mb-0.5 group-hover/stat:opacity-100 transition-opacity">DEF</span>
+            <div className={`w-full bg-black/40 border border-white/5 rounded-lg p-1 flex items-center justify-center gap-1.5 
+                            shadow-[0_2px_4px_rgba(0,0,0,0.2)] group-hover/stat:border-cyan-500/30 transition-colors`}>
+              <span className="text-cyan-400 drop-shadow-md text-xs">🛡️</span>
+              <span className="text-white font-bold leading-none" style={{ fontFamily: "var(--font-display)", fontSize: size === "sm" ? "0.9rem" : "1.1rem" }}>
+                {cardWithDefaults.defense}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-[10px] text-purple-300 uppercase font-bold tracking-wider">SPD</span>
-            <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "0.8rem" : "1rem" }}>{cardWithDefaults.speed}</span>
+
+          <div className="flex-1 flex flex-col items-center group/stat">
+            <span className="text-[9px] text-amber-300 font-bold tracking-widest opacity-60 mb-0.5 group-hover/stat:opacity-100 transition-opacity">SPD</span>
+            <div className={`w-full bg-black/40 border border-white/5 rounded-lg p-1 flex items-center justify-center gap-1.5 
+                            shadow-[0_2px_4px_rgba(0,0,0,0.2)] group-hover/stat:border-amber-500/30 transition-colors`}>
+              <span className="text-amber-400 drop-shadow-md text-xs">⚡</span>
+              <span className="text-white font-bold leading-none" style={{ fontFamily: "var(--font-display)", fontSize: size === "sm" ? "0.9rem" : "1.1rem" }}>
+                {cardWithDefaults.speed}
+              </span>
+            </div>
           </div>
         </div>
 
